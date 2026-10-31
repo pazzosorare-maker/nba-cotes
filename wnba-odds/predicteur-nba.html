@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estimateur NBA</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0f1216;
+    --panel: #171b21;
+    --border: #262b33;
+    --text: #e8eaed;
+    --text-2: #c3c2b7;
+    --muted: #8b93a1;
+    --accent: #ff6a13;
+    --grid: #262b33;
+    --axis: #3a404b;
+    --s1: #3987e5;   /* face a l'equipe selectionnee */
+    --ref: #8b93a1;  /* reference : niveau habituel */
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 20px;
+    background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+  h1 .logo { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  h2 { font-size: 16px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 12px; margin-bottom: 12px; line-height: 1.5; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  nav.tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  nav.tabs a { color: var(--muted); text-decoration: none; font-size: 13px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; }
+  nav.tabs a.active { color: var(--text); border-color: var(--accent); }
+
+  .panel, section.card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 18px; }
+  .controls { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+  .controls .field { flex: 1; min-width: 230px; }
+  label { display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  input, select {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 10px 12px; border-radius: 6px; font-size: 14px; font-family: inherit;
+  }
+  button {
+    background: var(--accent); color: #1a0f08; border: none; padding: 10px 20px; border-radius: 6px;
+    font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  button:hover { filter: brightness(1.08); }
+  .error { color: #f0876e; font-size: 13px; margin-top: 10px; min-height: 1em; }
+
+  .title-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 20px; font-weight: 600; margin: 0 0 6px; }
+  .title-line .vs { color: var(--muted); font-weight: 400; }
+  .title-line .logo-img { width: 34px; height: 34px; object-fit: contain; }
+  .lead { font-size: 13px; color: var(--text-2); line-height: 1.6; margin: 0; }
+  .notice { border: 1px solid #fab219; border-radius: 8px; padding: 9px 12px; font-size: 12px; color: var(--text); margin: 12px 0 0; line-height: 1.5; }
+  .notice b { color: #fab219; }
+  .info { border: 1px solid var(--axis); border-radius: 8px; padding: 9px 12px; font-size: 12px; color: var(--text-2); margin: 12px 0 0; line-height: 1.5; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin: 4px 0 4px; }
+  .tile { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .tile .label { font-size: 12px; color: var(--muted); }
+  .tile .value { font-size: 30px; font-weight: 600; margin-top: 2px; }
+  .tile .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .tile.verdict .value { font-size: 22px; padding-top: 6px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--text-2); margin: 4px 0 10px; }
+  .key { display: inline-block; width: 14px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 6px; border-radius: 1px; }
+  .key.bar { border-top-width: 6px; }
+  .chartbox { position: relative; }
+  svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+  svg text { font-family: inherit; fill: var(--muted); font-size: 11px; }
+  svg text.val { fill: var(--text-2); }
+  svg text.halo { paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+  .tooltip {
+    position: absolute; pointer-events: none; z-index: 5; min-width: 190px; background: var(--bg);
+    border: 1px solid var(--axis); border-radius: 8px; padding: 8px 10px; font-size: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.45); opacity: 0; transition: opacity 0.08s;
+  }
+  .tooltip.on { opacity: 1; }
+  .tooltip .th { color: var(--muted); margin-bottom: 4px; }
+  .tooltip .tr { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+  .tooltip .tr .v { font-weight: 700; min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+  .tooltip .tr .n { color: var(--text-2); }
+
+  table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.grid th {
+    text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+    padding: 8px 8px; border-bottom: 1px solid var(--border); font-weight: 500; white-space: nowrap;
+  }
+  table.grid td { text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.grid th.l, table.grid td.l { text-align: left; }
+  table.grid tr.game td { background: rgba(255,255,255,0.03); font-weight: 600; text-align: left; padding-top: 10px; border-bottom-color: var(--axis); }
+  table.grid tr.avg td { font-weight: 600; border-bottom-color: var(--axis); }
+  table.grid tr.empty-row td { color: var(--muted); text-align: left; }
+  .game-title { display: inline-flex; align-items: center; gap: 8px; }
+  .game-title img { width: 20px; height: 20px; object-fit: contain; }
+  .game-title .when { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .rowscroll { overflow-x: auto; }
+
+  /* avatars joueurs : photo ronde (ou initiales) + petit badge du club */
+  .avatar-wrap { position: relative; display: inline-block; flex-shrink: 0; vertical-align: middle; }
+  .avatar { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: center top; background: #2b313b; }
+  .avatar.ph { display: flex; align-items: center; justify-content: center; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; border: 1px solid var(--border); }
+  .avatar-badge { position: absolute; right: -4px; bottom: -4px; width: 46%; height: 46%; object-fit: contain; border-radius: 50%; background: var(--panel); padding: 1px; }
+  .player-cell { display: inline-flex; align-items: center; gap: 10px; }
+  .player-cell > span:last-child { white-space: nowrap; }
+
+  .empty { color: var(--muted); font-size: 13px; padding: 14px 2px; }
+  footer { margin-top: 20px; font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; }
+  @media (max-width: 640px) { body { padding: 20px 12px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="logo"></span>Estimateur NBA</h1>
+  <div class="meta" id="meta">Chargement...</div>
+  <nav class="tabs">
+    <a href="index.html">Cotes NBA</a>
+    <a href="predicteur-nba.html" class="active">Estimateur NBA</a>
+    <a href="stat-joueur.html">Stat du joueur</a>
+    <a href="suivi.html">Suivi des modeles</a>
+    <a href="suivi-paris.html">Suivi des paris</a>
+  </nav>
+
+  <div class="panel">
+    <div class="controls">
+      <div class="field">
+        <label for="player-input">Joueur</label>
+        <input id="player-input" list="player-list" placeholder="Ex : Alperen Sengun (HOU)" autocomplete="off">
+        <datalist id="player-list"></datalist>
+      </div>
+      <div class="field">
+        <label for="opponent-select">Equipe adverse</label>
+        <select id="opponent-select"></select>
+      </div>
+      <button id="show-btn" type="button">Afficher</button>
+    </div>
+    <div class="error" id="error"></div>
+  </div>
+
+  <div id="result"></div>
+
+  <footer>Donnees : box-scores basketball-reference.com (saison en cours) &middot; mises a jour a chaque lancement de start.bat</footer>
+</div>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const SVG_NS = "http://www.w3.org/2000/svg";
+const POSITION_LABELS = { PG: "meneurs", SG: "arrieres", SF: "ailiers", PF: "ailiers forts", C: "pivots" };
+const POSITION_ORDER = ["PG", "SG", "SF", "PF", "C"];
+let PRED = null, MATCHUPS = null, LOGOS = {}, BY_NORM = {};
+
+/* ------------------------------------------------------------ utilitaires */
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+const NAME_SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv"]);
+function norm(name) {
+  const tokens = name.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, "").split(" ").filter(Boolean);
+  while (tokens.length > 2 && NAME_SUFFIXES.has(tokens[tokens.length - 1])) tokens.pop();
+  return tokens.join("");
+}
+function fmt(v, d = 1) { return v == null || Number.isNaN(v) ? "—" : v.toFixed(d).replace(".", ","); }
+function fmtSigned(v, d = 1) { return v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(d).replace(".", ","); }
+function fmtDate(iso) { const [, m, d] = iso.split("-"); return `${d}/${m}`; }
+function mean(a) { return a.length ? a.reduce((s, x) => s + x, 0) / a.length : null; }
+function niceMax(v) {
+  // maximum de l'axe = 4 graduations regulieres de pas « rond » (1, 1.5, 2, 2.5, 3, 4, 5 ou 10 x 10^k)
+  if (!(v > 0)) return 1;
+  const raw = v / 4, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 1.5, 2, 2.5, 3, 4, 5, 10].map(m => m * p).find(s => s >= raw - 1e-9);
+  return step * 4;
+}
+function svgEl(tag, attrs = {}, text) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (text != null) node.textContent = text;
+  return node;
+}
+function logoImg(team, cls = "logo-img") {
+  const src = LOGOS[team];
+  return src ? `<img class="${cls}" src="${esc(src)}" alt="${esc(team)}" title="${esc(team)}">` : "";
+}
+
+/* avatar : photo du joueur (cache local) ou, a defaut, ses initiales ; badge = logo du club */
+let PHOTOS = {};
+function avatar(name, team, size = 32) {
+  const src = PHOTOS[norm(name)];
+  const tokens = name.split(" ").filter(Boolean);
+  const initials = ((tokens[0] || "?")[0] + (tokens.length > 1 ? tokens[tokens.length - 1][0] : "")).toUpperCase();
+  const face = src
+    ? `<img class="avatar" src="${esc(src)}" alt="" loading="lazy">`
+    : `<span class="avatar ph" style="font-size:${Math.round(size * 0.36)}px">${esc(initials)}</span>`;
+  const logoSrc = team ? LOGOS[team] : null;
+  const badge = logoSrc ? `<img class="avatar-badge" src="${esc(logoSrc)}" alt="" title="${esc(team)}">` : "";
+  return `<span class="avatar-wrap" style="width:${size}px;height:${size}px" title="${esc(name)}">${face}${badge}</span>`;
+}
+
+/* ------------------------------------------------------------ calculs */
+function mainPosition(playerName) {
+  if (MATCHUPS.positions[playerName]) return MATCHUPS.positions[playerName];
+  const w = PRED.players[playerName].positionWeights || {};
+  const best = POSITION_ORDER.reduce((a, b) => ((w[b] || 0) > (w[a] || 0) ? b : a), POSITION_ORDER[0]);
+  return (w[best] || 0) > 0 ? best : null;
+}
+const praOf = o => o.pts + o.reb + o.ast;
+
+/** Joueurs du poste retenu, match par match, avec ecart a leur niveau habituel. */
+function analyse(position, teamName) {
+  const games = MATCHUPS.teams[teamName].games.map(g => {
+    const players = g.players.filter(p => p.position === position).map(p => ({
+      ...p, pra: praOf(p), usualPra: p.usual ? praOf(p.usual) : null,
+    }));
+    const compared = players.filter(p => p.usualPra != null);
+    return {
+      ...g, players,
+      avgPra: mean(players.map(p => p.pra)),
+      avgUsual: mean(compared.map(p => p.usualPra)),
+      avgPraCompared: mean(compared.map(p => p.pra)),    // meme echantillon que « habituel » (sinon comparaison faussee)
+    };
+  });
+  const all = games.flatMap(g => g.players);
+  const compared = all.filter(p => p.usualPra != null);
+  return {
+    games, count: all.length, comparedCount: compared.length,
+    avgPra: mean(all.map(p => p.pra)),
+    avgPraCompared: mean(compared.map(p => p.pra)),
+    avgUsual: mean(compared.map(p => p.usualPra)),
+    over: compared.filter(p => p.pra > p.usualPra).length,
+  };
+}
+
+/* ------------------------------------------------------------ rendu */
+function renderChart(box, games, teamName) {
+  const shown = games.filter(g => g.avgUsual != null);
+  if (!shown.length) { box.replaceChildren(Object.assign(document.createElement("div"), { className: "empty", textContent: "Aucun match exploitable pour le graphique." })); return; }
+  const maxV = niceMax(Math.max(...shown.flatMap(g => [g.avgUsual, g.avgPraCompared])) * 1.18);
+  const W = 640, H = 270, L = 36, R = 14, T = 14, B = 60, pw = W - L - R, ph = H - T - B, LOGO = 24;
+  const y = v => T + ph - (v / maxV) * ph;
+  const svg = svgEl("svg", { class: "chart", viewBox: `0 0 ${W} ${H}`, role: "img",
+    "aria-label": `PRA moyen des joueurs du poste face a ${teamName}, comparé à leur niveau habituel, match par match. Les valeurs figurent aussi dans le tableau ci-dessous.` });
+  for (let i = 0; i <= 4; i++) {
+    const v = (maxV / 4) * i;
+    svg.append(svgEl("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: i === 0 ? "var(--axis)" : "var(--grid)", "stroke-width": 1 }));
+    svg.append(svgEl("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end" }, fmt(v, v % 1 ? 1 : 0)));
+  }
+  const slot = pw / shown.length, barW = Math.min(24, slot * 0.28), gap = 2;
+  const tip = document.createElement("div"); tip.className = "tooltip";
+  const labels = [];
+  shown.forEach((g, i) => {
+    const cx = L + slot * i + slot / 2;
+    const group = svgEl("g", { tabindex: "0", role: "img",
+      "aria-label": `${fmtDate(g.date)} contre ${g.opponent} : PRA moyen ${fmt(g.avgPraCompared)} face a ${teamName}, ${fmt(g.avgUsual)} habituellement` });
+    [[g.avgUsual, "var(--ref)", cx - barW - gap / 2], [g.avgPraCompared, "var(--s1)", cx + gap / 2]].forEach(([v, color, x]) => {
+      const top = y(v), h = y(0) - top, r = Math.min(4, h);
+      group.append(svgEl("path", { d: `M${x},${y(0)} V${top + r} Q${x},${top} ${x + r},${top} H${x + barW - r} Q${x + barW},${top} ${x + barW},${top + r} V${y(0)} Z`, fill: color }));
+      labels.push(svgEl("text", { class: "val halo", x: x + barW / 2, y: top - 5, "text-anchor": "middle" }, fmt(v, 1)));
+    });
+    group.append(svgEl("rect", { x: cx - slot / 2 + 4, y: T, width: slot - 8, height: ph, fill: "transparent" }));
+    const show = () => {
+      tip.replaceChildren();
+      const head = document.createElement("div"); head.className = "th"; head.textContent = `${fmtDate(g.date)} · ${g.opponent} (${g.players.length} joueur(s))`;
+      tip.append(head);
+      [["Face a " + teamName, g.avgPraCompared, "var(--s1)"], ["Habituellement", g.avgUsual, "var(--ref)"]].forEach(([name, v, color]) => {
+        const row = document.createElement("div"); row.className = "tr";
+        const key = document.createElement("span"); key.className = "key"; key.style.borderTopColor = color; key.style.borderTopWidth = "3px";
+        const val = document.createElement("span"); val.className = "v"; val.textContent = fmt(v);
+        const n = document.createElement("span"); n.className = "n"; n.textContent = name;
+        row.append(key, val, n); tip.append(row);
+      });
+      const diff = document.createElement("div"); diff.className = "th"; diff.style.marginTop = "4px"; diff.textContent = `Ecart : ${fmtSigned(g.avgPraCompared - g.avgUsual)} PRA`;
+      tip.append(diff);
+      const rect = box.getBoundingClientRect(), scale = rect.width / W;
+      // sur le cote du groupe de barres (a droite, ou a gauche pres du bord) : il ne masque jamais ses propres valeurs
+      const half = (slot * scale) / 2, rightSide = cx * scale + half - 6;
+      tip.style.left = (rightSide + 205 <= rect.width ? rightSide : Math.max(0, cx * scale - half - 199)) + "px";
+      tip.style.top = "8px";
+      tip.classList.add("on");
+    };
+    group.addEventListener("pointermove", show); group.addEventListener("focus", show);
+    group.addEventListener("pointerleave", () => tip.classList.remove("on")); group.addEventListener("blur", () => tip.classList.remove("on"));
+    svg.append(group);
+    const src = LOGOS[g.opponent];
+    if (src) {
+      const img = svgEl("image", { href: src, x: cx - LOGO / 2, y: H - B + 7, width: LOGO, height: LOGO });
+      img.append(svgEl("title", {}, g.opponent));
+      svg.append(img);
+    }
+    svg.append(svgEl("text", { x: cx, y: H - 8, "text-anchor": "middle" }, fmtDate(g.date)));
+  });
+  labels.forEach(l => svg.append(l));
+  box.replaceChildren(svg, tip);
+}
+
+function gameTable(a, position, teamName) {
+  const label = POSITION_LABELS[position];
+  const rows = a.games.map(g => {
+    const venue = g.home ? "a domicile" : "a l'exterieur";
+    const head = `<tr class="game"><td colspan="8"><span class="game-title">${fmtDate(g.date)} ${logoImg(g.opponent, "")}${esc(g.opponent)}
+        <span class="when">${esc(teamName)} ${venue}, ${g.score.team}-${g.score.opponent}</span></span></td></tr>`;
+    if (!g.players.length) return head + `<tr class="empty-row"><td colspan="8">Aucun joueur de ce poste n'a joue ${esc(String(MATCHUPS.minMinutes))} minutes ou plus.</td></tr>`;
+    const body = g.players.map(p => `<tr>
+        <td class="l"><span class="player-cell">${avatar(p.name, g.opponent, 28)}<span>${esc(p.name)}</span></span></td>
+        <td>${fmt(p.mp, 0)}</td><td>${p.pts}</td><td>${p.reb}</td><td>${p.ast}</td><td><b>${p.pra}</b></td>
+        <td>${p.usualPra == null ? "—" : fmt(p.usualPra)}${p.usual ? ` <small style="color:var(--muted)">(${p.usual.n} m.)</small>` : ""}</td>
+        <td><b>${p.usualPra == null ? "—" : fmtSigned(p.pra - p.usualPra)}</b></td></tr>`).join("");
+    const avg = g.players.length > 1 && g.avgUsual != null
+      ? `<tr class="avg"><td class="l">Moyenne du match</td><td></td><td></td><td></td><td></td><td>${fmt(g.avgPraCompared)}</td><td>${fmt(g.avgUsual)}</td><td>${fmtSigned(g.avgPraCompared - g.avgUsual)}</td></tr>` : "";
+    return head + body + avg;
+  }).join("");
+  return `<div class="rowscroll"><table class="grid">
+    <thead><tr><th class="l">${label.charAt(0).toUpperCase() + label.slice(1)} adverses</th><th>Min</th><th>Pts</th><th>Reb</th><th>Pds</th><th>PRA</th><th>PRA habituel</th><th>Ecart</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+
+function showResult(playerName, teamName) {
+  const player = PRED.players[playerName];
+  const position = mainPosition(playerName);
+  if (!position) { $("result").innerHTML = `<div class="empty">Poste inconnu pour ce joueur.</div>`; return; }
+  const share = player.positionWeights ? player.positionWeights[position] : null;
+  const label = POSITION_LABELS[position];
+  const ownTeam = Object.keys(PRED.teams).find(n => PRED.teams[n] === player.team);
+  const a = analyse(position, teamName);
+  const nGames = a.games.length;
+
+  const delta = a.comparedCount ? a.avgPraCompared - a.avgUsual : null;
+  const verdict = delta == null ? "—" : Math.abs(delta) < 0.5 ? "Equivalent" : delta > 0 ? "Surperformance" : "Sous-performance";
+  const verdictIcon = delta == null || Math.abs(delta) < 0.5 ? "=" : delta > 0 ? "▲" : "▼";
+
+  const sample = a.comparedCount < 8
+    ? `<div class="notice"><b>&#9888; Echantillon reduit</b> — ${a.comparedCount} joueur(s)-match(s) comparable(s) seulement : un ecart ici peut etre du pur hasard.</div>` : "";
+  const sameTeam = ownTeam === teamName
+    ? `<div class="info">${esc(playerName)} joue dans cette equipe : on affiche quand meme comment ${esc(teamName)} a defendu contre les ${label} adverses.</div>` : "";
+
+  $("result").innerHTML = `
+    <section class="card">
+      <div class="title-line">${avatar(playerName, ownTeam, 56)}<span>${esc(playerName)}</span><span class="vs">vs</span>${logoImg(teamName)}<span>${esc(teamName)}</span></div>
+      <p class="lead">Poste retenu : <b>${position}</b> (${label.replace(/s$/, "")})${share != null ? `, ${Math.round(share * 100)} % de son temps de jeu` : ""}.
+        On regarde les ${nGames} derniers matchs de ${esc(teamName)} et les ${label} adverses (${MATCHUPS.minMinutes} min ou plus) qui l'ont affrontee.</p>
+      ${sameTeam}${sample}
+    </section>
+
+    <section class="card">
+      <h2>PRA des ${label} face a ${esc(teamName)}</h2>
+      <div class="sub">${a.count} joueur(s)-match(s) sur ${nGames} match(s). Niveau habituel = moyenne du joueur sur ses matchs <b>hors</b> ceux contre ${esc(teamName)}.</div>
+      ${a.comparedCount ? `<div class="tiles">
+        <div class="tile"><div class="label">PRA moyen face a ${esc(teamName)}</div><div class="value">${fmt(a.avgPraCompared)}</div><div class="hint">par joueur et par match</div></div>
+        <div class="tile"><div class="label">PRA habituel de ces joueurs</div><div class="value">${fmt(a.avgUsual)}</div><div class="hint">hors matchs contre ${esc(teamName)}</div></div>
+        <div class="tile verdict"><div class="label">Ecart</div><div class="value">${verdictIcon} ${fmtSigned(delta)}</div><div class="hint">${verdict}${verdict === "Equivalent" ? "" : delta > 0 ? " : ils ont fait mieux que d'habitude" : " : ils ont fait moins bien que d'habitude"}</div></div>
+        <div class="tile"><div class="label">Au-dessus de leur habituel</div><div class="value">${a.over} / ${a.comparedCount}</div><div class="hint">joueurs-matchs</div></div>
+      </div>` : `<div class="empty">Aucun de ces joueurs n'a de matchs hors ${esc(teamName)} pour servir de reference.</div>`}
+      <div class="legend"><span><span class="key bar" style="border-top-color:var(--ref)"></span>Niveau habituel</span><span><span class="key bar" style="border-top-color:var(--s1)"></span>Face a ${esc(teamName)}</span></div>
+      <div class="chartbox" id="chart-box"></div>
+    </section>
+
+    <section class="card">
+      <h2>Detail match par match</h2>
+      <div class="sub">PRA = points + rebonds + passes. Ecart = PRA du match − PRA habituel. (n m.) = nombre de matchs servant de reference.</div>
+      ${gameTable(a, position, teamName)}
+    </section>`;
+  renderChart($("chart-box"), a.games, teamName);
+}
+
+/* ------------------------------------------------------------ recherche */
+function resolvePlayer(raw) {
+  const text = raw.trim();
+  if (!text) return null;
+  if (PRED.players[text]) return text;
+  const m = text.match(/^(.*)\s\(([A-Z0-9]+)\)$/);
+  const bare = m ? m[1] : text;
+  if (PRED.players[bare]) return bare;
+  return BY_NORM[norm(bare)] || null;   // tolere accents / majuscules / suffixes (Jr., III...)
+}
+
+/* La selection (joueur + equipe) est gardee dans le navigateur pour la retrouver en revenant sur l'onglet.
+   Si le stockage est indisponible (navigation privee...), la page marche simplement sans memoire. */
+const STORAGE_KEY = "nba.estimateur.selection";
+function loadSelection() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch (err) { return {}; }
+}
+// Le joueur choisi est partage avec l'onglet « Stat du joueur » (meme cle dans les deux pages).
+const SHARED_PLAYER_KEY = "nba.selection.player";
+function loadSharedPlayer() {
+  try { return (JSON.parse(localStorage.getItem(SHARED_PLAYER_KEY)) || {}).player || null; } catch (err) { return null; }
+}
+function saveSharedPlayer(name) {
+  try { localStorage.setItem(SHARED_PLAYER_KEY, JSON.stringify({ player: name })); } catch (err) { /* sans memoire */ }
+}
+function saveSelection(patch) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...loadSelection(), ...patch })); } catch (err) { /* sans memoire */ }
+}
+
+function submit(silent) {
+  const raw = $("player-input").value;
+  const name = resolvePlayer(raw);
+  if (!name) {
+    $("error").textContent = silent || !raw.trim() ? "" : `Joueur introuvable : « ${raw.trim()} ». Choisissez un nom dans la liste.`;
+    if (!silent && raw.trim()) $("result").replaceChildren();
+    return;
+  }
+  const team = $("opponent-select").value;
+  if (!MATCHUPS.teams[team]) { $("error").textContent = "Selectionnez une equipe adverse."; return; }
+  $("error").textContent = "";
+  saveSelection({ team });
+  saveSharedPlayer(name);
+  showResult(name, team);
+}
+
+function restoreSelection() {
+  // Un lien (ex. depuis « Cotes NBA ») prime sur la derniere selection : ?player=...&team=...
+  const params = new URLSearchParams(location.search);
+  const linkedPlayer = resolvePlayer(params.get("player") || "");
+  const linkedTeam = params.get("team");
+  if (linkedPlayer && MATCHUPS.teams[linkedTeam]) {
+    $("opponent-select").value = linkedTeam;
+    $("player-input").value = `${linkedPlayer} (${PRED.players[linkedPlayer].team})`;
+    history.replaceState(null, "", location.pathname);   // l'URL propre : un rechargement garde la selection memorisee
+    submit(true);
+    return;
+  }
+  const saved = loadSelection();
+  if (saved.team && MATCHUPS.teams[saved.team]) $("opponent-select").value = saved.team;
+  const player = loadSharedPlayer() || saved.player;   // saved.player : ancienne memorisation, avant le partage
+  if (player && PRED.players[player]) {
+    $("player-input").value = `${player} (${PRED.players[player].team})`;
+    submit(true);
+  }
+}
+
+async function init() {
+  try {
+    const [predRes, matchRes, logosRes, photosRes] = await Promise.all([
+      fetch("data/nba_predictions.json", { cache: "no-store" }),
+      fetch("data/position_matchups.json", { cache: "no-store" }),
+      fetch("logos/teams.json", { cache: "no-store" }),
+      fetch("photos/players.json", { cache: "no-store" }),
+    ]);
+    if (!predRes.ok) throw new Error("data/nba_predictions.json introuvable : lancez start.bat.");
+    if (!matchRes.ok) throw new Error("data/position_matchups.json introuvable : lancez start.bat (ou build_position_matchups.py).");
+    PRED = await predRes.json();
+    MATCHUPS = await matchRes.json();
+    LOGOS = logosRes.ok ? await logosRes.json() : {};
+    PHOTOS = photosRes.ok ? await photosRes.json() : {};
+  } catch (err) {
+    $("meta").textContent = "";
+    $("error").textContent = err.message;
+    return;
+  }
+  $("meta").textContent = `Donnees du ${new Date(MATCHUPS.generatedAt).toLocaleString("fr-FR")} — ${Object.keys(PRED.players).length} joueurs, ${Object.keys(MATCHUPS.teams).length} equipes`;
+
+  const list = $("player-list");
+  for (const name of Object.keys(PRED.players).sort((a, b) => a.localeCompare(b))) {
+    BY_NORM[norm(name)] = name;
+    const opt = document.createElement("option");
+    opt.value = `${name} (${PRED.players[name].team})`;
+    list.append(opt);
+  }
+  const select = $("opponent-select");
+  for (const team of Object.keys(MATCHUPS.teams).sort((a, b) => a.localeCompare(b))) {
+    const opt = document.createElement("option");
+    opt.value = team;
+    opt.textContent = PRED.teams[team] ? `${team} (${PRED.teams[team]})` : team;
+    select.append(opt);
+  }
+  $("show-btn").addEventListener("click", () => submit(false));
+  $("player-input").addEventListener("keydown", e => { if (e.key === "Enter") submit(false); });
+  $("opponent-select").addEventListener("change", () => { saveSelection({ team: $("opponent-select").value }); submit(true); });
+  // choix dans la liste deroulante : affichage immediat (une saisie partielle n'affiche pas d'erreur)
+  $("player-input").addEventListener("input", () => {
+    const raw = $("player-input").value;
+    if (PRED.players[raw] || /\([A-Z0-9]+\)$/.test(raw)) submit(true); else $("error").textContent = "";
+  });
+  restoreSelection();
+}
+
+init();
+</script>
+<script src="site.js"></script>
+</body>
+</html>

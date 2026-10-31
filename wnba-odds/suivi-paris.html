@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suivi des paris - NBA</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0f1216;
+    --panel: #171b21;
+    --border: #262b33;
+    --text: #e8eaed;
+    --text-2: #c3c2b7;
+    --muted: #8b93a1;
+    --accent: #ff6a13;
+    --grid: #262b33;
+    --axis: #3a404b;
+    --warn: #fab219;
+    --won: #3ccf8e;
+    --lost: #f0876e;
+    /* series (palette validee en mode sombre contre la surface #171b21) */
+    --s1: #3987e5;  /* modele « implication + poste » */
+    --s2: #d95926;  /* modele d'implication */
+    --s3: #199e70;  /* double validation */
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 32px 20px; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+  h1 .logo { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  h2 { font-size: 16px; margin: 0 0 4px; }
+  h3 { font-size: 13px; margin: 14px 0 6px; color: var(--text-2); }
+  table.grid tr.total td { font-weight: 700; color: var(--text); border-top: 1px solid var(--axis); }
+  table.grid td.zero { color: var(--muted); }
+  .sub { color: var(--muted); font-size: 12px; margin-bottom: 14px; line-height: 1.5; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  nav.tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  nav.tabs a { color: var(--muted); text-decoration: none; font-size: 13px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; }
+  nav.tabs a.active { color: var(--text); border-color: var(--accent); }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: flex-end; padding: 12px 14px; margin-bottom: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; }
+  .filters label { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .filters select, button.btn { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 13px; font-family: inherit; }
+  button.btn { cursor: pointer; }
+  button.btn:hover, .filters select:hover { border-color: var(--muted); }
+
+  .notice { border: 1px solid var(--warn); border-radius: 8px; padding: 10px 14px; font-size: 13px; line-height: 1.5; margin-bottom: 18px; }
+  .notice b { color: var(--warn); }
+  .notice.hidden { display: none; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .tile { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .tile .label { font-size: 12px; color: var(--muted); }
+  .tile .value { font-size: 26px; font-weight: 600; margin-top: 4px; }
+  .tile .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .pos { color: var(--won); } .neg { color: var(--lost); }
+
+  section.card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 18px; }
+  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .rowscroll { overflow-x: auto; }
+  table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.grid th { text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--border); font-weight: 500; white-space: nowrap; }
+  table.grid td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.grid th.l, table.grid td.l { text-align: left; }
+  table.grid td.muted, .muted { color: var(--muted); }
+  table.grid td.best { font-weight: 700; color: var(--text); }
+  .key { display: inline-block; width: 14px; height: 0; border-top: 3px solid; vertical-align: middle; margin-right: 6px; border-radius: 1px; }
+  table.grid th.c, table.grid td.c { text-align: center; }
+  .team-logo { width: 26px; height: 26px; object-fit: contain; vertical-align: middle; }
+  .match-logos { display: inline-flex; align-items: center; gap: 8px; }
+  /* Pari : vert = Plus de (estimation au-dessus de la ligne), orange = Moins de ; la fleche double la couleur */
+  .pick { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; border: 1px solid; font-size: 14px; }
+  .pick-word { font-weight: 700; }
+  .pick-line { font-weight: 800; font-size: 15px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .pick.over  { color: #3ccf8e; background: rgba(60, 207, 142, 0.14); border-color: rgba(60, 207, 142, 0.6); }
+  .pick.under { color: #f08a5d; background: rgba(240, 138, 93, 0.14); border-color: rgba(240, 138, 93, 0.6); }
+  .chip { display: inline-block; padding: 2px 9px; border-radius: 999px; font-weight: 700; font-size: 12px; border: 1px solid var(--axis); color: var(--text-2); }
+  .chip.won  { color: var(--won);  border-color: rgba(60, 207, 142, 0.55); background: rgba(60, 207, 142, 0.14); }
+  .chip.lost { color: var(--lost); border-color: rgba(240, 135, 110, 0.55); background: rgba(240, 135, 110, 0.14); }
+  .empty { color: var(--muted); font-size: 13px; padding: 18px 4px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--text-2); margin: 6px 0 4px; }
+  svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+  svg text { font-family: inherit; fill: var(--muted); font-size: 11px; }
+
+  details.defs { font-size: 13px; color: var(--text-2); }
+  details.defs summary { cursor: pointer; color: var(--text); }
+  details.defs dl { margin: 10px 0 0; display: grid; grid-template-columns: 190px 1fr; gap: 8px 16px; }
+  details.defs dt { color: var(--text); }
+  details.defs dd { margin: 0; line-height: 1.5; }
+  footer { margin-top: 20px; font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; }
+  @media (max-width: 640px) { body { padding: 20px 12px; } details.defs dl { grid-template-columns: 1fr; } table.grid th, table.grid td { padding: 6px 5px; font-size: 12px; } }
+  @media (forced-colors: active) { .key { border-top-color: CanvasText; } }
+
+  /* avatars joueurs : photo ronde (ou initiales) + petit badge du club */
+  .avatar-wrap { position: relative; display: inline-block; flex-shrink: 0; vertical-align: middle; }
+  .avatar { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: center top; background: #2b313b; }
+  .avatar.ph { display: flex; align-items: center; justify-content: center; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; border: 1px solid var(--border); }
+  .avatar-badge { position: absolute; right: -4px; bottom: -4px; width: 46%; height: 46%; object-fit: contain; border-radius: 50%; background: var(--panel); padding: 1px; }
+  .player-cell { display: inline-flex; align-items: center; gap: 10px; }
+  a.player-link { color: inherit; text-decoration: none; display: inline-block; border-radius: 6px; }
+  a.player-link:hover .name, a.player-link:focus-visible .name { color: var(--accent); text-decoration: underline; }
+  a.player-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="logo"></span>Suivi des paris</h1>
+  <div class="meta" id="meta">Chargement...</div>
+  <nav class="tabs">
+    <a href="index.html">Cotes NBA</a>
+    <a href="predicteur-nba.html">Estimateur NBA</a>
+    <a href="stat-joueur.html">Stat du joueur</a>
+    <a href="suivi.html">Suivi des modeles</a>
+    <a href="suivi-paris.html" class="active">Suivi des paris</a>
+  </nav>
+
+  <section class="card">
+    <div class="card-head"><div>
+      <h2>Comparaison des modeles et de la double validation</h2>
+      <div class="sub">Tous les paris termines (gagnes ou perdus ; les annules sont exclus), mise de 1 par pari aux cotes enregistrees. Les groupes « seul » et « double validation » sont contenus dans les paris de chaque modele.</div>
+    </div></div>
+    <div class="rowscroll"><table class="grid" id="compare-table"></table></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div>
+      <h2>Gain cumule</h2>
+      <div class="sub" id="chart-sub"></div>
+    </div>
+    <button class="btn" id="chart-toggle" type="button">Voir en tableau</button></div>
+    <div class="legend" id="chart-legend"></div>
+    <div id="chart-box"></div>
+    <div class="rowscroll" id="chart-table-box" hidden></div>
+  </section>
+
+  <div class="filters">
+    <div>
+      <label for="f-view">Paris affiches ci-dessous</label>
+      <select id="f-view"></select>
+    </div>
+    <div>
+      <label for="f-status">Resultat</label>
+      <select id="f-status">
+        <option value="all">Tous</option>
+        <option value="pending">En attente</option>
+        <option value="won">Gagnes</option>
+        <option value="lost">Perdus</option>
+        <option value="void">Annules</option>
+      </select>
+    </div>
+    <div>
+      <label for="f-side">Cote du pari</label>
+      <select id="f-side">
+        <option value="all">Plus de et Moins de</option>
+        <option value="over">Plus de</option>
+        <option value="under">Moins de</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="notice hidden" id="notice"><b>&#9888; Echantillon reduit</b> <span id="notice-text"></span></div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section class="card">
+    <div class="card-head"><div>
+      <h2>Bilan Plus de / Moins de</h2>
+      <div class="sub" id="side-sub"></div>
+    </div></div>
+    <div class="rowscroll"><table class="grid" id="side-table"></table></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div>
+      <h2>Bilan par cote</h2>
+      <div class="sub" id="odds-sub"></div>
+    </div></div>
+    <h3>Plus de ▲</h3>
+    <div class="rowscroll"><table class="grid" id="odds-over"></table></div>
+    <h3>Moins de ▼</h3>
+    <div class="rowscroll"><table class="grid" id="odds-under"></table></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div>
+      <h2 id="bets-title">Paris</h2>
+      <div class="sub" id="bets-sub"></div>
+    </div></div>
+    <div class="rowscroll"><table class="grid" id="bets-table"></table></div>
+  </section>
+
+  <section class="card">
+    <details class="defs">
+      <summary>Definitions et regles du suivi</summary>
+      <dl>
+        <dt>Value d'un modele</dt><dd>Un modele signale une « value » quand son estimation s'ecarte de la ligne Winamax d'au moins 0,5 ecart-type du joueur (variabilite match a match de son PRA). Au-dessus de la ligne : Plus de ; en dessous : Moins de. Les deux modeles : le modele d'implication et la variante « implication + poste ».</dd>
+        <dt>Double validation</dt><dd>Les deux modeles signalent la value du meme cote. Le pari est compte une seule fois dans ce groupe.</dd>
+        <dt>Implication seule / Impl. + poste seul</dt><dd>Un seul des deux modeles signale la value ; l'autre reste sous le seuil.</dd>
+        <dt>Desaccord</dt><dd>Les deux modeles signalent une value mais de cotes opposes. Chaque modele garde son pari (l'un gagne forcement, l'autre perd) ; ce groupe n'entre pas dans les comparaisons « seul » ni « double validation ».</dd>
+        <dt>Tous les paris d'un modele</dt><dd>Tous les paris signales par ce modele, qu'ils soient seuls, doubles ou en desaccord : c'est le suivi complet du modele, pour les comparer entre eux.</dd>
+        <dt>Enregistrement</dt><dd>Un pari est enregistre au premier lancement de start.bat ou au moins un modele le signale, avant le coup d'envoi, avec la ligne, les cotes et les estimations du moment. Il n'est ensuite ni modifie ni retire, meme si la ligne bouge ou si l'autre modele se range plus tard du meme avis. Un seul enregistrement par joueur et par match.</dd>
+        <dt>Mise et gain</dt><dd>Mise fictive de 1 par pari. Gagne : cote − 1. Perdu : −1. Annule : 0.</dd>
+        <dt>Bilan par cote</dt><dd>Les paris de la selection sont classes par tranche de la cote du cote parie (celle enregistree avant le match), separement pour Plus de et Moins de. Les tranches de cote elevee sont rares : avec peu de paris, un taux de reussite ou un gain n'a pas de sens statistique, regardez d'abord le nombre de paris termines.</dd>
+        <dt>Annule</dt><dd>Mise rendue si le joueur n'a pas joue (absent du box-score) ou si le PRA reel est egal a la ligne.</dd>
+        <dt>Reussite</dt><dd>Gagnes / (gagnes + perdus). L'intervalle a 95 % (methode de Wilson) montre la plage dans laquelle se situe probablement le vrai taux. Deux groupes dont les intervalles se chevauchent largement ne sont pas distinguables : n'en tirez aucune conclusion.</dd>
+        <dt>Seuil d'equilibre</dt><dd>Moyenne de 1 / cote des paris termines : la reussite minimale pour ne pas perdre avec ces cotes. La marge de Winamax sur ces marches (environ 16 %) place ce seuil vers 58 %.</dd>
+        <dt>Rendement</dt><dd>Gain total / nombre de paris termines. Tres instable sur petit echantillon : il faut environ 400 paris termines pour distinguer 58 % de 54 % de reussite.</dd>
+      </dl>
+    </details>
+  </section>
+
+  <footer>Les paris sont enregistres a chaque lancement de start.bat &middot; un jour sans lancement avant le match est un pari non enregistre. Indicateur de suivi, pas un conseil de pari.</footer>
+</div>
+
+<script>
+"use strict";
+
+let LOGOS = {};
+let PHOTOS = {};
+const NAME_SUFFIXES_AV = new Set(["jr", "sr", "ii", "iii", "iv"]);
+function normAvatar(name) {
+  const tokens = name.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, "").split(" ").filter(Boolean);
+  while (tokens.length > 2 && NAME_SUFFIXES_AV.has(tokens[tokens.length - 1])) tokens.pop();
+  return tokens.join("");
+}
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+// Photo du joueur (cache local) ou, a defaut, ses initiales ; badge = logo du club, si on le connait.
+function avatar(name, team, size = 32) {
+  const src = PHOTOS[normAvatar(name)];
+  const tokens = name.split(" ").filter(Boolean);
+  const initials = ((tokens[0] || "?")[0] + (tokens.length > 1 ? tokens[tokens.length - 1][0] : "")).toUpperCase();
+  const face = src
+    ? `<img class="avatar" src="${esc(src)}" alt="" loading="lazy">`
+    : `<span class="avatar ph" style="font-size:${Math.round(size * 0.36)}px">${esc(initials)}</span>`;
+  const logoSrc = team ? LOGOS[team] : null;
+  const badge = logoSrc ? `<img class="avatar-badge" src="${esc(logoSrc)}" alt="" title="${esc(team)}">` : "";
+  return `<span class="avatar-wrap" style="width:${size}px;height:${size}px" title="${esc(name)}">${face}${badge}</span>`;
+}
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+const MIN_SAMPLE = 30;   // en dessous : avertissement d'echantillon reduit
+const MODELS = ["implication", "implicationPoste"];
+const MODEL_LABEL = { implication: "Implication", implicationPoste: "Impl. + poste" };
+const SIDE_LABEL = { over: "Plus de ▲", under: "Moins de ▼" };
+const STATUS_LABEL = { pending: "En attente", won: "Gagne ✓", lost: "Perdu ✗", void: "Annule" };
+
+/* Une « entree » = le pari d'un modele sur un joueur-match. Un pari valide par les deux modeles
+   donne deux entrees (groupe « double ») : les vues « double » n'en gardent qu'une. */
+const GROUPS = {
+  implAll:    { label: "Modele d'implication — tous ses paris", short: "Implication (tous)", color: "var(--s2)", test: e => e.model === "implication" },
+  posteAll:   { label: "Impl. + poste — tous ses paris",        short: "Impl. + poste (tous)", color: "var(--s1)", test: e => e.model === "implicationPoste" },
+  double:     { label: "Double validation",                      short: "Double validation", color: "var(--s3)", test: e => e.group === "double" && e.model === "implication" },
+  implSingle: { label: "Implication seule",                      short: "Implication seule", color: null, test: e => e.group === "single" && e.model === "implication" },
+  posteSingle:{ label: "Impl. + poste seul",                     short: "Impl. + poste seul", color: null, test: e => e.group === "single" && e.model === "implicationPoste" },
+  conflict:   { label: "Desaccord (cotes opposes, chaque modele compte)", short: "Desaccord", color: null, test: e => e.group === "conflict" },
+};
+const COMPARE_ORDER = ["implAll", "posteAll", "double", "implSingle", "posteSingle", "conflict"];
+const CHART_SERIES = ["implAll", "posteAll", "double"];
+
+const $ = id => document.getElementById(id);
+const state = { entries: [], betCount: 0, view: "double", status: "all", side: "all", chartTable: false };
+
+/* ------------------------------------------------------------- utilitaires */
+function fmt(v, d = 1) { return v == null || Number.isNaN(v) ? "—" : v.toFixed(d).replace(".", ","); }
+function fmtSigned(v, d = 2) { return v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(d).replace(".", ","); }
+function fmtPct(v, d = 0) { return v == null ? "—" : (v * 100).toFixed(d).replace(".", ",") + " %"; }
+function fmtDate(ts) { return new Date(ts * 1000).toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit" }); }
+function dayKey(ts) { const d = new Date(ts * 1000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+function mean(a) { return a.length ? a.reduce((s, x) => s + x, 0) / a.length : null; }
+function el(tag, attrs = {}, text) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (text != null) node.textContent = text;
+  return node;
+}
+function svgEl(tag, attrs = {}, text) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (text != null) node.textContent = text;
+  return node;
+}
+function niceStep(range) {
+  const raw = range / 4, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+}
+
+/* Intervalle de Wilson a 95 % pour une proportion */
+function wilson(wins, n) {
+  if (!n) return null;
+  const z = 1.96, p = wins / n, d = 1 + z * z / n;
+  const center = (p + z * z / (2 * n)) / d, half = (z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))) / d;
+  return [Math.max(0, center - half), Math.min(1, center + half)];
+}
+
+/* -------------------------------------------------------- mise en forme des donnees */
+function buildEntries(bets) {
+  const entries = [];
+  for (const bet of bets) {
+    for (const model of MODELS) {
+      const side = bet.picks[model];
+      if (!side) continue;
+      const other = bet.picks[model === "implication" ? "implicationPoste" : "implication"];
+      const result = bet.results ? bet.results[model] : null;
+      entries.push({
+        bet, model, side,
+        group: other == null ? "single" : other === side ? "double" : "conflict",
+        odd: side === "over" ? bet.overOdd : bet.underOdd,
+        status: bet.status === "pending" || !result ? "pending" : result.status,
+        profit: result ? result.profit : null,
+      });
+    }
+  }
+  return entries;
+}
+
+function summarize(entries) {
+  const settled = entries.filter(e => e.status === "won" || e.status === "lost");
+  const won = settled.filter(e => e.status === "won").length;
+  const profit = settled.reduce((s, e) => s + e.profit, 0);
+  return {
+    total: entries.length,
+    pending: entries.filter(e => e.status === "pending").length,
+    voided: entries.filter(e => e.status === "void").length,
+    n: settled.length, won, lost: settled.length - won,
+    hit: settled.length ? won / settled.length : null,
+    interval: wilson(won, settled.length),
+    breakeven: mean(settled.map(e => 1 / e.odd)),
+    profit,
+    roi: settled.length ? profit / settled.length : null,
+  };
+}
+
+const inGroup = key => state.entries.filter(GROUPS[key].test);
+function viewEntries() {
+  return inGroup(state.view).filter(e => (state.status === "all" || e.status === state.status) && (state.side === "all" || e.side === state.side));
+}
+
+/* ------------------------------------------------------------------- rendu */
+function renderCompare() {
+  const head = el("tr");
+  ["Groupe de paris", "Enregistres", "Termines", "Gagnes", "Reussite", "Intervalle a 95 %", "Seuil d'equilibre", "Gain", "Rendement"].forEach((h, k) => head.append(el("th", k === 0 ? { class: "l" } : {}, h)));
+  const thead = el("thead"); thead.append(head);
+  const tbody = el("tbody");
+  for (const key of COMPARE_ORDER) {
+    const g = GROUPS[key], s = summarize(inGroup(key));
+    const tr = el("tr");
+    const label = el("td", { class: "l" });
+    if (g.color) { const k = el("span", { class: "key" }); k.style.borderTopColor = g.color; label.append(k); }
+    label.append(document.createTextNode(g.label));
+    tr.append(label, el("td", {}, String(s.total)), el("td", {}, String(s.n)), el("td", {}, String(s.won)), el("td", {}, fmtPct(s.hit)),
+      el("td", {}, s.interval ? `${fmtPct(s.interval[0])} – ${fmtPct(s.interval[1])}` : "—"), el("td", {}, fmtPct(s.breakeven)),
+      el("td", { class: s.profit > 0 ? "pos" : s.profit < 0 ? "neg" : "" }, s.n ? fmtSigned(s.profit) : "—"),
+      el("td", { class: s.roi > 0 ? "pos" : s.roi < 0 ? "neg" : "" }, s.roi == null ? "—" : fmtSigned(s.roi * 100, 1) + " %"));
+    tbody.append(tr);
+  }
+  $("compare-table").replaceChildren(thead, tbody);
+}
+
+function renderChart() {
+  $("chart-sub").textContent = "Gain cumule (mise de 1) de chaque groupe, jour de match par jour de match. Au-dessus de 0 : les paris rapportent.";
+  $("chart-toggle").textContent = state.chartTable ? "Voir le graphique" : "Voir en tableau";
+  $("chart-box").hidden = state.chartTable; $("chart-table-box").hidden = !state.chartTable;
+  $("chart-legend").replaceChildren(...CHART_SERIES.map(key => {
+    const s = el("span"), k = el("span", { class: "key" }); k.style.borderTopColor = GROUPS[key].color;
+    s.append(k, document.createTextNode(GROUPS[key].short)); return s;
+  }));
+
+  const settledOf = key => inGroup(key).filter(e => e.status === "won" || e.status === "lost");
+  const days = [...new Set(CHART_SERIES.flatMap(key => settledOf(key).map(e => dayKey(e.bet.matchStart))))].sort();
+  const series = CHART_SERIES.map(key => {
+    const list = settledOf(key);
+    return days.map(day => {
+      const upTo = list.filter(e => dayKey(e.bet.matchStart) <= day);
+      return { day, n: upTo.length, cum: Math.round(upTo.reduce((s, e) => s + e.profit, 0) * 1000) / 1000 };
+    });
+  });
+
+  // equivalent tableau du graphique
+  const table = el("table", { class: "grid" });
+  const hr = el("tr"); ["Date", ...CHART_SERIES.map(k => GROUPS[k].short)].forEach((h, k) => hr.append(el("th", k === 0 ? { class: "l" } : {}, h)));
+  const thead = el("thead"); thead.append(hr);
+  const tb = el("tbody");
+  days.forEach((day, i) => {
+    const tr = el("tr"); tr.append(el("td", { class: "l" }, day.split("-").reverse().slice(0, 2).join("/")));
+    series.forEach(s => tr.append(el("td", {}, `${fmtSigned(s[i].cum)} (${s[i].n} paris)`)));
+    tb.append(tr);
+  });
+  table.append(thead, tb); $("chart-table-box").replaceChildren(table);
+
+  const box = $("chart-box");
+  if (days.length < 2) {
+    box.replaceChildren(el("div", { class: "empty" }, days.length ? "Un seul jour de matchs termines pour l'instant : la courbe apparait des le deuxieme jour." : "Aucun pari termine pour l'instant."));
+    return;
+  }
+  const W = 640, H = 270, L = 44, R = 14, T = 14, B = 30, pw = W - L - R, ph = H - T - B;
+  const values = [0, ...series.flatMap(s => s.map(p => p.cum))];
+  const step = niceStep((Math.max(...values) - Math.min(...values)) || 1);
+  const lo = Math.floor(Math.min(...values) / step) * step, hi = Math.ceil(Math.max(...values) / step) * step;
+  const x = i => L + (i / (days.length - 1)) * pw;
+  const y = v => T + ph - ((v - lo) / (hi - lo || 1)) * ph;
+  const svg = svgEl("svg", { class: "chart", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Gain cumule des paris termines, pour chaque modele et pour la double validation. Les memes valeurs figurent dans le tableau." });
+  for (let v = lo; v <= hi + 1e-9; v += step) {
+    svg.append(svgEl("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: Math.abs(v) < 1e-9 ? "var(--muted)" : "var(--grid)", "stroke-width": 1 }));
+    svg.append(svgEl("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end" }, fmt(v, step < 1 ? 1 : 0)));
+  }
+  const labelStep = Math.ceil(days.length / 8);
+  days.forEach((day, i) => { if (i % labelStep === 0 || i === days.length - 1) svg.append(svgEl("text", { x: x(i), y: H - 10, "text-anchor": "middle" }, day.split("-").reverse().slice(0, 2).join("/"))); });
+  CHART_SERIES.forEach((key, si) => {
+    svg.append(svgEl("polyline", { points: series[si].map((p, i) => `${x(i)},${y(p.cum)}`).join(" "), fill: "none", stroke: GROUPS[key].color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    series[si].forEach((p, i) => {
+      const dot = svgEl("circle", { cx: x(i), cy: y(p.cum), r: i === days.length - 1 ? 4 : 2.5, fill: GROUPS[key].color, stroke: "var(--panel)", "stroke-width": 2 });
+      dot.append(svgEl("title", {}, `${GROUPS[key].short} — ${p.day.split("-").reverse().slice(0, 2).join("/")} : gain cumule ${fmtSigned(p.cum)} (${p.n} paris termines)`));
+      svg.append(dot);
+    });
+  });
+  box.replaceChildren(svg);
+}
+
+function renderTiles(s) {
+  const roiClass = s.roi == null ? "" : s.roi > 0 ? "pos" : s.roi < 0 ? "neg" : "";
+  const tiles = [
+    ["Paris", s.total, `${s.pending} en attente`],
+    ["Termines", s.n, `${s.won} gagne(s), ${s.lost} perdu(s)${s.voided ? `, ${s.voided} annule(s)` : ""}`],
+    ["Reussite", fmtPct(s.hit), s.interval ? `intervalle a 95 % : ${fmtPct(s.interval[0])} a ${fmtPct(s.interval[1])}` : "apres le premier pari termine"],
+    ["Seuil d'equilibre", fmtPct(s.breakeven), "reussite minimale aux cotes enregistrees"],
+    ["Gain cumule", s.n ? `<span class="${roiClass}">${fmtSigned(s.profit)}</span>` : "—", "mise de 1 par pari"],
+    ["Rendement", s.roi == null ? "—" : `<span class="${roiClass}">${fmtSigned(s.roi * 100, 1)} %</span>`, "gain par pari termine"],
+  ];
+  $("tiles").replaceChildren(...tiles.map(([label, value, hint]) => {
+    const t = el("div", { class: "tile" });
+    const v = el("div", { class: "value" }); v.innerHTML = String(value);
+    t.append(el("div", { class: "label" }, label), v, el("div", { class: "hint" }, hint));
+    return t;
+  }));
+}
+
+function renderNotice(s) {
+  $("notice").classList.toggle("hidden", s.n >= MIN_SAMPLE);
+  $("notice-text").textContent = s.n === 0
+    ? "Aucun pari de cette selection n'est encore termine : les resultats apparaitront apres les matchs et un nouveau lancement de start.bat."
+    : `${s.n} pari(s) termine(s) dans cette selection : en dessous de ${MIN_SAMPLE}, un gain ou une perte peut etre du pur hasard. Il faut environ 400 paris pour conclure.`;
+}
+
+/* Tranches de cote (cote du cote parie, a l'enregistrement). Comparaison en centimes : pas d'erreur d'arrondi. */
+const ODDS_BUCKETS = [
+  { label: "Moins de 1,50", test: c => c < 150 },
+  { label: "1,50 – 1,59", test: c => c >= 150 && c < 160 },
+  { label: "1,60 – 1,69", test: c => c >= 160 && c < 170 },
+  { label: "1,70 – 1,79", test: c => c >= 170 && c < 180 },
+  { label: "1,80 – 1,89", test: c => c >= 180 && c < 190 },
+  { label: "1,90 – 1,99", test: c => c >= 190 && c < 200 },
+  { label: "2,00 – 2,24", test: c => c >= 200 && c < 225 },
+  { label: "2,25 – 2,49", test: c => c >= 225 && c < 250 },
+  { label: "2,50 et plus", test: c => c >= 250 },
+];
+const cents = odd => Math.round(odd * 100);
+
+/* Tableau de bilan : une ligne par groupe de paris (+ une ligne de total si demandee). */
+function renderStatTable(table, firstHeader, rows, { interval = false, total = null } = {}) {
+  const columns = [firstHeader, "Enregistres", "Termines", "Gagnes", "Reussite", ...(interval ? ["Intervalle a 95 %"] : []), "Seuil d'equilibre", "Gain", "Rendement"];
+  const head = el("tr");
+  columns.forEach((label, k) => head.append(el("th", k === 0 ? { class: "l" } : {}, label)));
+  const thead = el("thead"); thead.append(head);
+  const tbody = el("tbody");
+  const addRow = (label, entries, isTotal) => {
+    const s = summarize(entries);
+    const tr = el("tr", isTotal ? { class: "total" } : {});
+    tr.append(el("td", { class: "l" }, label), el("td", { class: s.total ? "" : "zero" }, String(s.total)), el("td", { class: s.n ? "" : "zero" }, String(s.n)),
+      el("td", { class: s.n ? "" : "zero" }, String(s.won)), el("td", {}, fmtPct(s.hit)));
+    if (interval) tr.append(el("td", {}, s.interval ? `${fmtPct(s.interval[0])} – ${fmtPct(s.interval[1])}` : "—"));
+    tr.append(el("td", {}, fmtPct(s.breakeven)),
+      el("td", { class: s.n ? (s.profit > 0 ? "pos" : s.profit < 0 ? "neg" : "") : "zero" }, s.n ? fmtSigned(s.profit) : "—"),
+      el("td", { class: s.roi > 0 ? "pos" : s.roi < 0 ? "neg" : "" }, s.roi == null ? "—" : fmtSigned(s.roi * 100, 1) + " %"));
+    tbody.append(tr);
+  };
+  rows.forEach(({ label, entries }) => addRow(label, entries, false));
+  if (total) addRow(total.label, total.entries, true);
+  table.replaceChildren(thead, tbody);
+}
+
+function renderBreakdowns() {
+  const group = inGroup(state.view);
+  const sub = `Selection : ${GROUPS[state.view].label}, tous resultats confondus (les filtres Resultat et Cote du pari ne s'appliquent pas ici). Reussite, gain et rendement portent sur les paris termines ; les annules sont exclus.`;
+  $("side-sub").textContent = sub;
+  $("odds-sub").textContent = `${sub} Tranches de cote du cote parie, a l'enregistrement.`;
+
+  const over = group.filter(e => e.side === "over"), under = group.filter(e => e.side === "under");
+  renderStatTable($("side-table"), "Cote du pari", [{ label: "Plus de ▲", entries: over }, { label: "Moins de ▼", entries: under }],
+    { interval: true, total: { label: "Ensemble", entries: group } });
+  for (const [id, entries, label] of [["odds-over", over, "Plus de"], ["odds-under", under, "Moins de"]]) {
+    renderStatTable($(id), "Cote", ODDS_BUCKETS.map(b => ({ label: b.label, entries: entries.filter(e => b.test(cents(e.odd))) })),
+      { total: { label: `${label} : toutes cotes`, entries } });
+  }
+}
+
+function signalLabel(e) {
+  if (e.group === "double") return "Les deux modeles";
+  return e.group === "single" ? `${MODEL_LABEL[e.model]} seul` : `${MODEL_LABEL[e.model]} (desaccord)`;
+}
+
+function renderBets(entries) {
+  const sorted = [...entries].sort((a, b) => b.bet.matchStart - a.bet.matchStart || a.bet.player.localeCompare(b.bet.player) || a.model.localeCompare(b.model));
+  $("bets-title").textContent = GROUPS[state.view].label;
+  $("bets-sub").textContent = `${sorted.length} pari(s). Estimations en PRA du modele d'implication (Impl.) et de sa variante par poste (+ poste) ; z = ecart estimation − ligne en ecarts-types du joueur.`;
+  const table = $("bets-table");
+  if (!sorted.length) { table.replaceChildren(); return; }
+  // Dans la vue « double validation », tous les paris sont valides par les deux modeles : colonne inutile.
+  const showSignal = state.view !== "double";
+  const columns = [["Date", "l"], ["Match", "l"], ["Joueur", "l"], ...(showSignal ? [["Signale par", "l"]] : []), ["Pari", "c"], ["Cote", ""],
+    ["Impl. (z)", ""], ["+ poste (z)", ""], ["Reel", ""], ["Resultat", ""], ["Gain", ""]];
+  const head = el("tr");
+  columns.forEach(([label, align]) => head.append(el("th", align ? { class: align } : {}, label)));
+  const thead = el("thead"); thead.append(head);
+  const tbody = el("tbody");
+  const total = e => e.pts + e.reb + e.ast;
+  const teamLogo = team => LOGOS[team]
+    ? `<img class="team-logo" src="${esc(LOGOS[team])}" alt="${esc(team)}" title="${esc(team)}">`
+    : `<span class="muted" title="${esc(team)}">${esc(team)}</span>`;
+  for (const e of sorted) {
+    const b = e.bet, tr = el("tr");
+    const playerCell = el("td", { class: "l" });
+    const href = `predicteur-nba.html?player=${encodeURIComponent(b.player)}&team=${encodeURIComponent(b.opponent)}`;
+    playerCell.innerHTML = `<a class="player-link" href="${esc(href)}" title="Voir ${esc(b.player)} face a ${esc(b.opponent)} dans l'Estimateur"><span class="player-cell">${avatar(b.player, b.team, 28)}<span class="name">${esc(b.player)}</span></span></a>`;
+    const actual = b.actual ? (b.actual.dnp ? "DNP" : `${b.actual.pra} <span class="muted">(${b.actual.pts}/${b.actual.reb}/${b.actual.ast})</span>`) : "—";
+    const reelCell = el("td"); reelCell.innerHTML = actual;
+    const resultCell = el("td"); resultCell.append(el("span", { class: `chip ${e.status}` }, STATUS_LABEL[e.status]));
+    const profitClass = e.profit > 0 ? "pos" : e.profit < 0 ? "neg" : "muted";
+    const estCell = m => el("td", { class: b.picks[m] ? "" : "muted" }, `${fmt(total(b.estimates[m]), 1)} (${fmtSigned(b.z[m], 1)})`);
+    const dateCell = el("td", { class: "l muted", title: new Date(b.matchStart * 1000).toLocaleString("fr-FR") }, fmtDate(b.matchStart));
+    const matchCell = el("td", { class: "l" });
+    matchCell.innerHTML = `<span class="match-logos">${teamLogo(b.team1)}<span class="muted">–</span>${teamLogo(b.team2)}</span>`;
+    // pari : pastille coloree (vert = Plus de, orange = Moins de) + fleche, puis la ligne en gras
+    const betCell = el("td", { class: "c" });
+    betCell.innerHTML = `<span class="pick ${e.side}"><span class="pick-word">${e.side === "over" ? "▲ Plus" : "▼ Moins"}</span><span class="pick-line">${fmt(b.line, 1)}</span></span>`;
+    betCell.title = `${e.side === "over" ? "Plus de" : "Moins de"} ${fmt(b.line, 1)} (PRA)`;
+    tr.append(dateCell, matchCell, playerCell, ...(showSignal ? [el("td", { class: "l" }, signalLabel(e))] : []),
+      betCell, el("td", {}, fmt(e.odd, 2)), estCell("implication"), estCell("implicationPoste"),
+      reelCell, resultCell, el("td", { class: profitClass }, e.profit == null ? "—" : fmtSigned(e.profit)));
+    tbody.append(tr);
+  }
+  table.replaceChildren(thead, tbody);
+}
+
+function render() {
+  const entries = viewEntries();
+  $("meta").textContent = state.betCount
+    ? `${state.betCount} pari(s) value enregistre(s) — ${state.entries.filter(e => e.status === "pending").length} pari(s)-modele(s) en attente`
+    : "Aucun pari enregistre pour l'instant.";
+  const s = summarize(entries);
+  renderCompare();
+  renderChart();
+  renderNotice(s);
+  renderTiles(s);
+  renderBreakdowns();
+  renderBets(entries);
+}
+
+async function init() {
+  try {
+    const [betsRes, logosRes, photosRes] = await Promise.all([
+      fetch("data/bets.json", { cache: "no-store" }),
+      fetch("logos/teams.json", { cache: "no-store" }),
+      fetch("photos/players.json", { cache: "no-store" }),
+    ]);
+    LOGOS = logosRes.ok ? await logosRes.json() : {};
+    PHOTOS = photosRes.ok ? await photosRes.json() : {};
+    if (!betsRes.ok) throw new Error("data/bets.json introuvable : lancez start.bat (ou track_bets.py) pour demarrer le suivi des paris.");
+    const bets = Object.values((await betsRes.json()).bets);
+    if (bets.some(b => !b.picks)) throw new Error("data/bets.json est a l'ancien format : relancez start.bat (ou track_bets.py) pour le mettre a jour.");
+    state.betCount = bets.length;
+    state.entries = buildEntries(bets);
+  } catch (err) {
+    $("meta").textContent = "";
+    $("tiles").replaceChildren(el("div", { class: "empty" }, err.message));
+    return;
+  }
+  const viewSelect = $("f-view");
+  for (const key of ["double", "implSingle", "posteSingle", "implAll", "posteAll", "conflict"]) viewSelect.append(el("option", { value: key }, GROUPS[key].label));
+  viewSelect.value = state.view;
+  viewSelect.addEventListener("change", e => { state.view = e.target.value; render(); });
+  $("f-status").addEventListener("change", e => { state.status = e.target.value; render(); });
+  $("f-side").addEventListener("change", e => { state.side = e.target.value; render(); });
+  $("chart-toggle").addEventListener("click", () => { state.chartTable = !state.chartTable; render(); });
+  render();
+}
+
+init();
+</script>
+<script src="site.js"></script>
+</body>
+</html>

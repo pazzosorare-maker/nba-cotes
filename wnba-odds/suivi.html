@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suivi des modeles - NBA</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0f1216;
+    --panel: #171b21;
+    --border: #262b33;
+    --text: #e8eaed;
+    --text-2: #c3c2b7;
+    --muted: #8b93a1;
+    --accent: #ff6a13;
+    --grid: #262b33;
+    --axis: #3a404b;
+    --good: #0ca30c;
+    --warn: #fab219;
+    /* series (palette validee en mode sombre contre la surface #171b21) */
+    --s1: #3987e5;  /* variante « implication + poste » (palette validee en mode sombre) */
+    --s2: #d95926;  /* modele d'implication (palette validee en mode sombre) */
+    --ref: #8b93a1; /* reference : moyenne de saison (pas une serie coloree) */
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 20px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+  h1 .logo { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  h2 { font-size: 16px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 12px; margin-bottom: 14px; line-height: 1.5; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  nav.tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  nav.tabs a {
+    color: var(--muted); text-decoration: none; font-size: 13px;
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
+  }
+  nav.tabs a.active { color: var(--text); border-color: var(--accent); }
+
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: flex-end;
+    padding: 12px 14px; margin-bottom: 18px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .filters label { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .filters select, button.btn {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 7px 10px; border-radius: 6px; font-size: 13px; font-family: inherit;
+  }
+  button.btn { cursor: pointer; }
+  button.btn:hover, .filters select:hover { border-color: var(--muted); }
+  .filters .spacer { flex: 1; }
+
+  .notice {
+    display: flex; gap: 10px; align-items: flex-start;
+    border: 1px solid var(--warn); border-radius: 8px; padding: 10px 14px;
+    font-size: 13px; line-height: 1.5; margin-bottom: 18px;
+  }
+  .notice b { color: var(--warn); white-space: nowrap; }
+  .notice.hidden { display: none; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .tile { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .tile .label { font-size: 12px; color: var(--muted); }
+  .tile .value { font-size: 26px; font-weight: 600; margin-top: 4px; }
+  .tile .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  section.card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 18px; }
+  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+
+  table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.grid th {
+    text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--border); font-weight: 500;
+  }
+  table.grid th:first-child, table.grid td:first-child { text-align: left; }
+  table.grid td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+  table.grid tr.group td { text-align: left; font-weight: 600; color: var(--text); padding-top: 14px; border-bottom-color: var(--axis); }
+  table.grid td.best { font-weight: 700; color: var(--text); }
+  table.grid td.na { color: var(--muted); }
+  table.grid td.label { color: var(--text-2); }
+  .key { display: inline-block; width: 14px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 6px; border-radius: 1px; }
+  .rowscroll { overflow-x: auto; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--text-2); margin: 6px 0 4px; }
+  .chartbox { position: relative; }
+  svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+  svg text { font-family: inherit; fill: var(--muted); font-size: 11px; }
+  svg text.val { fill: var(--text-2); }
+  svg text.lbl { fill: var(--text-2); }
+  .tooltip {
+    position: absolute; pointer-events: none; z-index: 5; min-width: 170px;
+    background: var(--bg); border: 1px solid var(--axis); border-radius: 8px;
+    padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+    opacity: 0; transition: opacity 0.08s;
+  }
+  .tooltip.on { opacity: 1; }
+  .tooltip .th { color: var(--muted); margin-bottom: 4px; }
+  .tooltip .tr { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+  .tooltip .tr .v { font-weight: 700; font-size: 13px; min-width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+  .tooltip .tr .n { color: var(--text-2); }
+  .empty { color: var(--muted); font-size: 13px; padding: 18px 4px; }
+
+  details.defs { margin-top: 4px; font-size: 13px; color: var(--text-2); }
+  details.defs summary { cursor: pointer; color: var(--text); }
+  details.defs dl { margin: 10px 0 0; display: grid; grid-template-columns: 190px 1fr; gap: 8px 16px; }
+  details.defs dt { color: var(--text); }
+  details.defs dd { margin: 0; color: var(--text-2); line-height: 1.5; }
+  .pos { color: var(--good); } .neg { color: #f0876e; }
+  footer { margin-top: 20px; font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; }
+  @media (max-width: 640px) {
+    body { padding: 20px 12px; }
+    details.defs dl { grid-template-columns: 1fr; }
+    table.grid th, table.grid td { padding: 6px 5px; font-size: 12px; }
+  }
+  @media (forced-colors: active) { .key { border-top-color: CanvasText; } }
+
+  /* avatars joueurs : photo ronde (ou initiales) + petit badge du club */
+  .avatar-wrap { position: relative; display: inline-block; flex-shrink: 0; vertical-align: middle; }
+  .avatar { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: center top; background: #2b313b; }
+  .avatar.ph { display: flex; align-items: center; justify-content: center; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; border: 1px solid var(--border); }
+  .avatar-badge { position: absolute; right: -4px; bottom: -4px; width: 46%; height: 46%; object-fit: contain; border-radius: 50%; background: var(--panel); padding: 1px; }
+  .player-cell { display: inline-flex; align-items: center; gap: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="logo"></span>Suivi des modeles</h1>
+  <div class="meta" id="meta">Chargement...</div>
+  <nav class="tabs">
+    <a href="index.html">Cotes NBA</a>
+    <a href="predicteur-nba.html">Estimateur NBA</a>
+    <a href="stat-joueur.html">Stat du joueur</a>
+    <a href="suivi.html" class="active">Suivi des modeles</a>
+    <a href="suivi-paris.html">Suivi des paris</a>
+  </nav>
+
+  <div class="filters" id="filters">
+    <div>
+      <label for="f-period">Periode</label>
+      <select id="f-period">
+        <option value="all">Toute la periode</option>
+        <option value="7">7 derniers jours</option>
+        <option value="30">30 derniers jours</option>
+      </select>
+    </div>
+    <div>
+      <label for="f-minutes">Minutes jouees minimum</label>
+      <select id="f-minutes">
+        <option value="0">Aucun minimum</option>
+        <option value="10">10 min</option>
+        <option value="15" selected>15 min</option>
+        <option value="20">20 min</option>
+        <option value="25">25 min</option>
+      </select>
+    </div>
+    <div>
+      <label for="f-scope">Joueurs</label>
+      <select id="f-scope">
+        <option value="all">Tous les joueurs suivis</option>
+        <option value="line">Seulement ceux avec une ligne Winamax</option>
+      </select>
+    </div>
+    <div>
+      <label for="f-stat">Statistique du graphique d'evolution</label>
+      <select id="f-stat">
+        <option value="pra">PRA</option>
+        <option value="pts">Points</option>
+        <option value="reb">Rebonds</option>
+        <option value="ast">Passes</option>
+      </select>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="export-btn" type="button">Exporter l'historique (CSV)</button>
+  </div>
+
+  <div class="notice hidden" id="notice"><b>&#9888; Echantillon reduit</b><span id="notice-text"></span></div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section class="card" id="sec-accuracy">
+    <div class="card-head"><div>
+      <h2>Precision des estimations</h2>
+      <div class="sub" id="acc-sub"></div>
+    </div></div>
+    <div class="legend" id="legend-bars"></div>
+    <div class="chartbox" id="bars-box"></div>
+    <div class="rowscroll"><table class="grid" id="acc-table"></table></div>
+  </section>
+
+  <section class="card" id="sec-trend">
+    <div class="card-head">
+      <div>
+        <h2>Evolution de l'erreur moyenne</h2>
+        <div class="sub" id="trend-sub"></div>
+      </div>
+      <button class="btn" id="trend-toggle" type="button">Voir en tableau</button>
+    </div>
+    <div class="legend" id="legend-trend"></div>
+    <div class="chartbox" id="trend-box"></div>
+    <div class="rowscroll" id="trend-table-box" hidden></div>
+  </section>
+
+  <section class="card" id="sec-lines">
+    <div class="card-head"><div>
+      <h2>Face aux lignes Winamax (PRA)</h2>
+      <div class="sub" id="lines-sub"></div>
+    </div></div>
+    <div class="rowscroll"><table class="grid" id="lines-table"></table></div>
+  </section>
+
+  <section class="card" id="sec-winner">
+    <div class="card-head"><div>
+      <h2>Cotes vainqueur</h2>
+      <div class="sub">Les cotes enregistrees avant chaque match, confrontees au resultat. Probabilites implicites normalisees (marge du bookmaker retiree).</div>
+    </div></div>
+    <div class="tiles" id="winner-tiles" style="margin:10px 0 0"></div>
+  </section>
+
+  <section class="card" id="sec-detail">
+    <div class="card-head"><div>
+      <h2>Detail des derniers joueurs evalues</h2>
+      <div class="sub" id="detail-sub"></div>
+    </div></div>
+    <div class="rowscroll"><table class="grid" id="detail-table"></table></div>
+  </section>
+
+  <section class="card">
+    <details class="defs">
+      <summary>Definitions des indicateurs et regles du suivi</summary>
+      <dl>
+        <dt>Instantane</dt><dd>Avant chaque match, l'appli enregistre les cotes, les estimations des deux modeles et la moyenne de saison pour tous les joueurs des deux equipes. Il est remplace a chaque lancement jusqu'au coup d'envoi, puis fige.</dd>
+        <dt>Implication + poste</dt><dd>Variante du modele d'implication : l'estimation de base est multipliee par ce que l'equipe adverse concede AU POSTE du joueur, au-dela de son effet global (mesure sur nos box-scores, joueurs de 10 min ou plus, poste principal ; ponderee par le temps de jeu du joueur a chaque poste). L'ajustement est rapproche de 1 tant que l'adversaire a peu de matchs (poids n / (n + 10)). Elle est suivie en parallele pour savoir, avec le temps, si elle fait mieux que le modele de base.</dd>
+        <dt>Resultat</dt><dd>Ajoute apres le match depuis le box-score. Un joueur absent du box-score est un DNP et n'est pas evalue.</dd>
+        <dt>Echantillon commun</dt><dd>Les modeles sont compares sur exactement les memes joueurs-matchs (ceux ayant les deux estimations et la moyenne de saison ; un enregistrement incomplet est exclu), pour que la comparaison soit equitable.</dd>
+        <dt>MAE</dt><dd>Erreur absolue moyenne : l'ecart moyen, en points/rebonds/passes, entre l'estimation et le reel. Plus c'est bas, mieux c'est.</dd>
+        <dt>RMSE</dt><dd>Comme la MAE mais les grosses erreurs pesent davantage.</dd>
+        <dt>Biais</dt><dd>Moyenne de (estimation - reel). Positif : le modele surestime en moyenne ; negatif : il sous-estime.</dd>
+        <dt>Erreur mediane</dt><dd>La moitie des estimations a une erreur plus petite que cette valeur ; insensible aux cas extremes.</dd>
+        <dt>Correlation</dt><dd>1 = l'estimation suit parfaitement le reel, 0 = aucun lien.</dd>
+        <dt>Duel</dt><dd>Part des joueurs-matchs ou un modele est plus proche du reel que son adversaire (les egalites sont exclues). Deux duels : chaque modele contre la moyenne de saison, et « implication + poste » contre « implication ». Au-dessus de 50 %, le modele fait mieux que son adversaire.</dd>
+        <dt>Direction</dt><dd>Le modele annonce « Plus » si son estimation depasse la ligne, « Moins » sinon. Reussite = le reel est du meme cote de la ligne. Les cas ou le reel est egal a la ligne sont ignores.</dd>
+        <dt>Signal fort</dt><dd>Direction restreinte aux cas ou l'estimation s'ecarte d'au moins 3 de la ligne.</dd>
+        <dt>Rendement theorique</dt><dd>Gain moyen par pari si l'on misait 1 sur le cote annonce par le modele, aux cotes enregistrees. Indicateur de suivi du modele, pas un conseil de pari ; instable sur petit echantillon.</dd>
+        <dt>Seuil d'equilibre</dt><dd>Taux de reussite minimal pour ne pas perdre aux cotes enregistrees (moyenne de 1 / cote du cote choisi). Compare-le a la reussite.</dd>
+      </dl>
+    </details>
+  </section>
+
+  <footer>Suivi alimente a chaque lancement de start.bat &middot; les cotes passees ne peuvent pas etre recuperees : un jour sans lancement est un jour sans enregistrement.</footer>
+</div>
+
+<script>
+"use strict";
+
+
+let PHOTOS = {};
+const NAME_SUFFIXES_AV = new Set(["jr", "sr", "ii", "iii", "iv"]);
+function normAvatar(name) {
+  const tokens = name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, "").split(" ").filter(Boolean);
+  while (tokens.length > 2 && NAME_SUFFIXES_AV.has(tokens[tokens.length - 1])) tokens.pop();
+  return tokens.join("");
+}
+function avatarEsc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+// Photo du joueur (cache local) ou, a defaut, ses initiales ; badge = logo du club, si on le connait.
+function avatar(name, team, size = 32) {
+  const src = PHOTOS[normAvatar(name)];
+  const tokens = name.split(" ").filter(Boolean);
+  const initials = ((tokens[0] || "?")[0] + (tokens.length > 1 ? tokens[tokens.length - 1][0] : "")).toUpperCase();
+  const face = src
+    ? `<img class="avatar" src="${avatarEsc(src)}" alt="" loading="lazy">`
+    : `<span class="avatar ph" style="font-size:${Math.round(size * 0.36)}px">${avatarEsc(initials)}</span>`;
+  const logoSrc = typeof LOGOS !== "undefined" && team ? LOGOS[team] : null;
+  const badge = logoSrc ? `<img class="avatar-badge" src="${avatarEsc(logoSrc)}" alt="" title="${avatarEsc(team)}">` : "";
+  return `<span class="avatar-wrap" style="width:${size}px;height:${size}px" title="${avatarEsc(name)}">${face}${badge}</span>`;
+}
+async function loadPhotos() {
+  try {
+    const res = await fetch("photos/players.json", { cache: "no-store" });
+    PHOTOS = res.ok ? await res.json() : {};
+  } catch (err) { PHOTOS = {}; }   // les photos sont decoratives : l'appli marche sans
+}
+
+const MODELS = [
+  { key: "implication",      label: "Modele d'implication",      short: "Implication",   color: "var(--s2)" },
+  { key: "implicationPoste", label: "Implication + poste",       short: "Impl. + poste", color: "var(--s1)" },
+  { key: "baseline",         label: "Moyenne de saison",         short: "Moy. saison",   color: "var(--ref)" },   // reference, pas une serie coloree
+];
+const STATS = [
+  { key: "pts", label: "Points" },
+  { key: "reb", label: "Rebonds" },
+  { key: "ast", label: "Passes" },
+  { key: "pra", label: "PRA" },
+];
+const STRONG_GAP = 3;     // ecart (en PRA) a partir duquel un signal est dit « fort »
+const MIN_SAMPLE = 30;    // en dessous : avertissement d'echantillon reduit
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+const $ = id => document.getElementById(id);
+const state = { history: null, period: "all", minutes: 15, scope: "all", stat: "pra", trendTable: false };
+
+/* ------------------------------------------------------------- utilitaires */
+function fmt(v, d = 1) { return v == null || Number.isNaN(v) ? "—" : v.toFixed(d).replace(".", ","); }
+function fmtSigned(v, d = 1) { return v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(d).replace(".", ","); }
+function fmtPct(v, d = 0) { return v == null ? "—" : (v * 100).toFixed(d).replace(".", ",") + " %"; }
+function fmtDate(iso) {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}`;
+}
+function el(tag, attrs = {}, text) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (text != null) node.textContent = text;
+  return node;
+}
+function svgEl(tag, attrs = {}, text) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (text != null) node.textContent = text;
+  return node;
+}
+function mean(a) { return a.length ? a.reduce((s, x) => s + x, 0) / a.length : null; }
+function median(a) {
+  if (!a.length) return null;
+  const s = [...a].sort((x, y) => x - y), m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+function corr(x, y) {
+  if (x.length < 3) return null;
+  const mx = mean(x), my = mean(y);
+  let sxy = 0, sxx = 0, syy = 0;
+  for (let i = 0; i < x.length; i++) { sxy += (x[i] - mx) * (y[i] - my); sxx += (x[i] - mx) ** 2; syy += (y[i] - my) ** 2; }
+  return sxx && syy ? sxy / Math.sqrt(sxx * syy) : null;
+}
+function niceMax(v) {
+  if (!(v > 0)) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(v))), f = v / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+}
+function csvCell(v) {
+  const s = v == null ? "" : String(v);
+  return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+/* -------------------------------------------------------- mise en forme des donnees */
+const withPra = o => (o ? { pts: o.pts, reb: o.reb, ast: o.ast, pra: o.pts + o.reb + o.ast } : null);
+
+/** Une ligne par joueur-match termine, avec reel + estimation du modele + moyenne de saison. */
+function buildRows(history) {
+  const rows = [];
+  let dnp = 0, incomplete = 0;
+  for (const match of Object.values(history.matches)) {
+    if (match.status !== "final") continue;
+    for (const rec of match.players) {
+      if (!rec.actual) continue;
+      if (rec.actual.dnp) { dnp++; continue; }
+      const est = { implication: withPra(rec.implication), implicationPoste: withPra(rec.implicationPoste), baseline: withPra(rec.baseline) };
+      if (!est.implication || !est.implicationPoste || !est.baseline) { incomplete++; continue; }
+      rows.push({
+        date: match.gameDate, matchId: match.matchId, player: rec.player, team: rec.team, opponent: rec.opponent,
+        mp: rec.actual.mp, actual: withPra(rec.actual), est,
+        line: rec.line, overOdd: rec.overOdd, underOdd: rec.underOdd,
+      });
+    }
+  }
+  return { rows, dnp, incomplete };
+}
+
+function latestDate(rows) { return rows.reduce((m, r) => (r.date > m ? r.date : m), ""); }
+
+function applyFilters(rows) {
+  let out = rows.filter(r => r.mp >= state.minutes);
+  if (state.scope === "line") out = out.filter(r => r.line != null);
+  if (state.period !== "all" && out.length) {
+    const end = new Date(latestDate(rows) + "T00:00:00Z");
+    const start = new Date(end.getTime() - (Number(state.period) - 1) * 86400000).toISOString().slice(0, 10);
+    out = out.filter(r => r.date >= start);
+  }
+  return out;
+}
+
+/* --------------------------------------------------------------- indicateurs */
+function metrics(rows, model, stat) {
+  const est = rows.map(r => r.est[model][stat]), act = rows.map(r => r.actual[stat]);
+  const err = est.map((e, i) => e - act[i]), abs = err.map(Math.abs);
+  return {
+    n: rows.length,
+    mae: mean(abs),
+    rmse: rows.length ? Math.sqrt(mean(err.map(e => e * e))) : null,
+    bias: mean(err),
+    med: median(abs),
+    corr: corr(est, act),
+  };
+}
+
+/** Part des joueurs-matchs ou le modele `a` est plus proche du reel que `b` (les egalites sont exclues). */
+function duel(rows, stat, a, b) {
+  let winsA = 0, winsB = 0, ties = 0;
+  for (const r of rows) {
+    const ea = Math.abs(r.est[a][stat] - r.actual[stat]), eb = Math.abs(r.est[b][stat] - r.actual[stat]);
+    if (Math.abs(ea - eb) < 1e-9) ties++; else if (ea < eb) winsA++; else winsB++;
+  }
+  const decided = winsA + winsB;
+  return { a: decided ? winsA / decided : null, b: decided ? winsB / decided : null, ties, decided };
+}
+
+function directionStats(rows, model) {
+  const est = r => r.est[model].pra;
+  const res = { all: { n: 0, hit: 0, odds: [], profit: 0, bets: 0 }, strong: { n: 0, hit: 0 } };
+  for (const r of rows) {
+    if (r.line == null || est(r) === r.line || r.actual.pra === r.line) continue;
+    const side = est(r) > r.line ? "over" : "under";
+    const won = (r.actual.pra > r.line) === (side === "over");
+    res.all.n++; if (won) res.all.hit++;
+    const odds = side === "over" ? r.overOdd : r.underOdd;
+    if (odds) { res.all.bets++; res.all.profit += won ? odds - 1 : -1; res.all.odds.push(1 / odds); }
+    if (Math.abs(est(r) - r.line) >= STRONG_GAP) { res.strong.n++; if (won) res.strong.hit++; }
+  }
+  return {
+    n: res.all.n,
+    hit: res.all.n ? res.all.hit / res.all.n : null,
+    breakeven: mean(res.all.odds),
+    roi: res.all.bets ? res.all.profit / res.all.bets : null,
+    bets: res.all.bets,
+    strongN: res.strong.n,
+    strongHit: res.strong.n ? res.strong.hit / res.strong.n : null,
+  };
+}
+
+/* ------------------------------------------------------------------- rendu */
+function renderTiles(history, built, rows) {
+  const matches = Object.values(history.matches);
+  const final = matches.filter(m => m.status === "final").length;
+  const withLine = rows.filter(r => r.line != null).length;
+  const tiles = [
+    ["Matchs suivis", matches.length, "depuis le premier instantane"],
+    ["Termines", final, "avec resultat reel"],
+    ["En attente", matches.length - final, "instantane fige au coup d'envoi"],
+    ["Joueurs-matchs evalues", rows.length, `apres filtres (${built.dnp} DNP ignores)`],
+    ["Lignes Winamax evaluees", withLine, "joueurs avec une ligne PRA"],
+  ];
+  const box = $("tiles");
+  box.replaceChildren(...tiles.map(([label, value, hint]) => {
+    const t = el("div", { class: "tile" });
+    t.append(el("div", { class: "label" }, label), el("div", { class: "value" }, String(value)), el("div", { class: "hint" }, hint));
+    return t;
+  }));
+}
+
+function renderNotice(rows) {
+  const n = rows.length;
+  $("notice").classList.toggle("hidden", n >= MIN_SAMPLE);
+  $("notice-text").textContent =
+    n === 0
+      ? " Aucun match termine n'a encore ete evalue : les indicateurs apparaitront apres le premier match joue et un nouveau lancement de l'appli."
+      : ` ${n} joueur(s)-match(s) evalue(s) pour l'instant : en dessous de ${MIN_SAMPLE}, un ecart entre modeles peut etre du pur hasard. Ne tirez pas de conclusion avant d'avoir plus de matchs.`;
+}
+
+function bestIndex(values, lowerIsBetter, useAbs) {
+  let best = -1, bestV = null;
+  values.forEach((v, i) => {
+    if (v == null) return;
+    const x = useAbs ? Math.abs(v) : v;
+    if (bestV == null || (lowerIsBetter ? x < bestV : x > bestV)) { bestV = x; best = i; }
+  });
+  return best;
+}
+
+function renderAccuracyTable(rows) {
+  const table = $("acc-table");
+  const head = el("tr");
+  head.append(el("th", {}, "Indicateur"));
+  for (const m of MODELS) {
+    const th = el("th");
+    const key = el("span", { class: "key" }); key.style.borderTopColor = m.color;
+    th.append(key, document.createTextNode(m.label));
+    head.append(th);
+  }
+  const thead = el("thead"); thead.append(head);
+  const tbody = el("tbody");
+
+  const defs = [
+    ["Erreur moyenne (MAE)", "mae", v => fmt(v, 2), true, false],
+    ["Erreur quadratique (RMSE)", "rmse", v => fmt(v, 2), true, false],
+    ["Biais (estimation − reel)", "bias", v => fmtSigned(v, 2), true, true],
+    ["Erreur mediane", "med", v => fmt(v, 2), true, false],
+    ["Correlation avec le reel", "corr", v => fmt(v, 2), false, false],
+  ];
+  for (const stat of STATS) {
+    const g = el("tr", { class: "group" });
+    const gc = el("td", {}, stat.label); gc.colSpan = MODELS.length + 1;
+    g.append(gc); tbody.append(g);
+    const ms = MODELS.map(m => metrics(rows, m.key, stat.key));
+    for (const [label, key, f, lower, abs] of defs) {
+      const vals = ms.map(m => m[key]);
+      const best = rows.length ? bestIndex(vals, lower, abs) : -1;
+      const tr = el("tr");
+      tr.append(el("td", { class: "label" }, label));
+      const tied = i => best >= 0 && vals[i] != null && f(vals[i]) === f(vals[best]);  // ex aequo a l'affichage
+      vals.forEach((v, i) => tr.append(el("td", { class: tied(i) ? "best" : v == null ? "na" : "" }, f(v) + (tied(i) ? " ✓" : ""))));
+      tbody.append(tr);
+    }
+    // duels : part des cas ou un modele est plus proche du reel que son adversaire (une ligne = un duel)
+    const duelRow = (label, hint, values) => {
+      const tr = el("tr");
+      tr.append(el("td", { class: "label", title: hint }, label));
+      const best = bestIndex(values, false, false);
+      const tied = i => best >= 0 && values[i] != null && fmtPct(values[i]) === fmtPct(values[best]);
+      values.forEach((v, i) => tr.append(el("td", { class: v == null ? "na" : tied(i) ? "best" : "" }, v == null ? "—" : fmtPct(v) + (tied(i) ? " ✓" : ""))));
+      tbody.append(tr);
+    };
+    const dImp = duel(rows, stat.key, "implication", "baseline");
+    const dPos = duel(rows, stat.key, "implicationPoste", "baseline");
+    const dVar = duel(rows, stat.key, "implicationPoste", "implication");
+    duelRow("Duel contre la moyenne de saison (plus proche du reel)",
+      `Egalites exclues : ${dImp.ties} (implication), ${dPos.ties} (+ poste)`, [dImp.a, dPos.a, null]);
+    duelRow("Duel : implication + poste contre implication",
+      `${dVar.ties} egalite(s) exclue(s)`, [dVar.b, dVar.a, null]);
+  }
+  table.replaceChildren(thead, tbody);
+}
+
+/* graphique en barres groupees : MAE par statistique et par modele */
+function renderBars(rows) {
+  const box = $("bars-box");
+  const legend = $("legend-bars");
+  legend.replaceChildren(...MODELS.map(m => {
+    const s = el("span"); const k = el("span", { class: "key" }); k.style.borderTopColor = m.color; k.style.borderTopWidth = "6px";
+    s.append(k, document.createTextNode(m.label)); return s;
+  }));
+  if (!rows.length) { box.replaceChildren(el("div", { class: "empty" }, "Aucune donnee a afficher pour l'instant.")); return; }
+
+  const data = STATS.map(s => MODELS.map(m => metrics(rows, m.key, s.key).mae));
+  const maxV = niceMax(Math.max(...data.flat()) * 1.12);
+  const W = 640, H = 260, L = 38, R = 10, T = 14, B = 34;
+  const pw = W - L - R, ph = H - T - B;
+  const y = v => T + ph - (v / maxV) * ph;
+  const svg = svgEl("svg", { class: "chart", viewBox: `0 0 ${W} ${H}`, role: "img",
+    "aria-label": "Erreur moyenne (MAE) par statistique et par modele. Les memes valeurs figurent dans le tableau ci-dessous." });
+
+  for (let i = 0; i <= 4; i++) {
+    const v = (maxV / 4) * i, yy = y(v);
+    svg.append(svgEl("line", { x1: L, x2: W - R, y1: yy, y2: yy, stroke: i === 0 ? "var(--axis)" : "var(--grid)", "stroke-width": 1 }));
+    svg.append(svgEl("text", { x: L - 6, y: yy + 4, "text-anchor": "end" }, fmt(v, v % 1 ? 1 : 0)));
+  }
+  const groupW = pw / STATS.length, barW = 24, gap = 2;
+  const tip = el("div", { class: "tooltip" }); box.replaceChildren(svg, tip); box.style.position = "relative";
+
+  STATS.forEach((stat, gi) => {
+    const gx = L + gi * groupW + groupW / 2;
+    const total = MODELS.length * barW + (MODELS.length - 1) * gap;
+    MODELS.forEach((m, mi) => {
+      const v = data[gi][mi], x = gx - total / 2 + mi * (barW + gap), top = y(v), h = Math.max(0, y(0) - top), r = Math.min(4, h);
+      // barre : base carree, extremite de donnee arrondie (4 px)
+      const path = `M${x},${y(0)} V${top + r} Q${x},${top} ${x + r},${top} H${x + barW - r} Q${x + barW},${top} ${x + barW},${top + r} V${y(0)} Z`;
+      const bar = svgEl("path", { d: path, fill: m.color, tabindex: "0", role: "img",
+        "aria-label": `${stat.label}, ${m.label} : erreur moyenne ${fmt(v, 2)}` });
+      const show = ev => {
+        const rect = box.getBoundingClientRect(), t = ev.target.getBoundingClientRect();
+        tip.replaceChildren(el("div", { class: "th" }, `${stat.label} — erreur moyenne`));
+        const row = el("div", { class: "tr" }); const k = el("span", { class: "key" }); k.style.borderTopColor = m.color;
+        row.append(k, el("span", { class: "v" }, fmt(v, 2)), el("span", { class: "n" }, m.label));
+        tip.append(row);
+        tip.style.left = Math.min(rect.width - 190, Math.max(0, t.left - rect.left + t.width / 2 - 85)) + "px";
+        tip.style.top = Math.max(0, t.top - rect.top - 62) + "px";
+        tip.classList.add("on");
+      };
+      bar.addEventListener("pointermove", show); bar.addEventListener("focus", show);
+      bar.addEventListener("pointerleave", () => tip.classList.remove("on")); bar.addEventListener("blur", () => tip.classList.remove("on"));
+      svg.append(bar);
+      svg.append(svgEl("text", { class: "val", x: x + barW / 2, y: top - 5, "text-anchor": "middle" }, fmt(v, 1)));
+    });
+    svg.append(svgEl("text", { class: "lbl", x: gx, y: H - 12, "text-anchor": "middle" }, stat.label));
+  });
+}
+
+/* graphique en lignes : MAE cumulee par jour */
+function trendSeries(rows, stat) {
+  const dates = [...new Set(rows.map(r => r.date))].sort();
+  return dates.map(d => {
+    const upTo = rows.filter(r => r.date <= d);
+    return { date: d, n: upTo.length, values: MODELS.map(m => metrics(upTo, m.key, stat).mae) };
+  });
+}
+
+function renderTrend(rows) {
+  const stat = STATS.find(s => s.key === state.stat);
+  $("trend-sub").textContent = `Erreur moyenne (MAE) cumulee sur ${stat.label}, jour par jour : chaque point inclut tous les matchs jusqu'a cette date.`;
+  const legend = $("legend-trend");
+  legend.replaceChildren(...MODELS.map(m => {
+    const s = el("span"); const k = el("span", { class: "key" }); k.style.borderTopColor = m.color; k.style.borderTopWidth = "3px";
+    s.append(k, document.createTextNode(m.label)); return s;
+  }));
+
+  const series = trendSeries(rows, stat.key);
+  const box = $("trend-box"), tableBox = $("trend-table-box");
+  $("trend-toggle").textContent = state.trendTable ? "Voir le graphique" : "Voir en tableau";
+  box.hidden = state.trendTable; tableBox.hidden = !state.trendTable; legend.hidden = state.trendTable;
+
+  // vue tableau (equivalent accessible du graphique)
+  const table = el("table", { class: "grid" });
+  const hr = el("tr"); ["Date", "Matchs-joueurs cumules", ...MODELS.map(m => m.label)].forEach(h => hr.append(el("th", {}, h)));
+  const thead = el("thead"); thead.append(hr);
+  const tb = el("tbody");
+  series.forEach(p => {
+    const tr = el("tr"); tr.append(el("td", {}, fmtDate(p.date)), el("td", {}, String(p.n)));
+    p.values.forEach(v => tr.append(el("td", {}, fmt(v, 2)))); tb.append(tr);
+  });
+  table.append(thead, tb); tableBox.replaceChildren(table);
+
+  if (series.length < 2) {
+    box.replaceChildren(el("div", { class: "empty" }, series.length
+      ? "Un seul jour de matchs pour l'instant : la courbe apparait des le deuxieme jour."
+      : "Aucune donnee a afficher pour l'instant."));
+    return;
+  }
+
+  const W = 640, H = 280, L = 38, R = 96, T = 14, B = 30;
+  const pw = W - L - R, ph = H - T - B;
+  const maxV = niceMax(Math.max(...series.flatMap(p => p.values)) * 1.1);
+  const x = i => L + (series.length === 1 ? pw / 2 : (i / (series.length - 1)) * pw);
+  const y = v => T + ph - (v / maxV) * ph;
+  const svg = svgEl("svg", { class: "chart", viewBox: `0 0 ${W} ${H}`, role: "img",
+    "aria-label": `Evolution de l'erreur moyenne sur ${stat.label} pour le modele d'implication, sa variante par poste et la moyenne de saison. Vue tableau disponible.` });
+
+  for (let i = 0; i <= 4; i++) {
+    const v = (maxV / 4) * i, yy = y(v);
+    svg.append(svgEl("line", { x1: L, x2: W - R, y1: yy, y2: yy, stroke: i === 0 ? "var(--axis)" : "var(--grid)", "stroke-width": 1 }));
+    svg.append(svgEl("text", { x: L - 6, y: yy + 4, "text-anchor": "end" }, fmt(v, v % 1 ? 1 : 0)));
+  }
+  const step = Math.ceil(series.length / 8);
+  series.forEach((p, i) => { if (i % step === 0 || i === series.length - 1) svg.append(svgEl("text", { x: x(i), y: H - 10, "text-anchor": "middle" }, fmtDate(p.date))); });
+
+  MODELS.forEach((m, mi) => {
+    const pts = series.map((p, i) => `${x(i)},${y(p.values[mi])}`).join(" ");
+    svg.append(svgEl("polyline", { points: pts, fill: "none", stroke: m.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    // dernier point : repere de 8 px avec anneau de 2 px couleur surface
+    const lx = x(series.length - 1), ly = y(series[series.length - 1].values[mi]);
+    svg.append(svgEl("circle", { cx: lx, cy: ly, r: 4, fill: m.color, stroke: "var(--panel)", "stroke-width": 2 }));
+  });
+
+  // etiquettes directes en bout de courbe : seulement si aucune ne chevauche une autre
+  // (sinon la legende et l'infobulle portent l'identite, on ne decale pas les etiquettes)
+  const ends = MODELS.map((m, mi) => ({ m, y: y(series[series.length - 1].values[mi]), v: series[series.length - 1].values[mi] })).sort((a, b) => a.y - b.y);
+  if (ends.every((e, i) => i === 0 || e.y - ends[i - 1].y >= 14)) {
+    ends.forEach(e => svg.append(svgEl("text", { class: "lbl", x: x(series.length - 1) + 10, y: e.y + 4 },
+      `${e.m.short} ${fmt(e.v, 1)}`)));
+  }
+
+  // curseur vertical + infobulle (une seule pour toutes les series)
+  const cross = svgEl("line", { y1: T, y2: T + ph, stroke: "var(--muted)", "stroke-width": 1, opacity: 0 });
+  svg.append(cross);
+  const hit = svgEl("rect", { x: L, y: T, width: pw, height: ph, fill: "transparent", tabindex: "0",
+    "aria-label": "Zone interactive : fleches gauche/droite pour parcourir les dates" });
+  svg.append(hit);
+  const tip = el("div", { class: "tooltip" });
+  box.replaceChildren(svg, tip); box.style.position = "relative";
+
+  const showAt = i => {
+    i = Math.max(0, Math.min(series.length - 1, i));
+    const p = series[i];
+    cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("opacity", 1);
+    tip.replaceChildren(el("div", { class: "th" }, `${fmtDate(p.date)} — ${p.n} joueurs-matchs cumules`));
+    MODELS.forEach((m, mi) => {
+      const row = el("div", { class: "tr" }); const k = el("span", { class: "key" }); k.style.borderTopColor = m.color;
+      row.append(k, el("span", { class: "v" }, fmt(p.values[mi], 2)), el("span", { class: "n" }, m.label)); tip.append(row);
+    });
+    const rect = box.getBoundingClientRect(), scale = rect.width / W;
+    tip.style.left = Math.min(rect.width - 200, Math.max(0, x(i) * scale + 12)) + "px";
+    tip.style.top = "16px";
+    tip.classList.add("on");
+    return i;
+  };
+  let current = series.length - 1;
+  hit.addEventListener("pointermove", ev => {
+    const rect = svg.getBoundingClientRect(), px = ((ev.clientX - rect.left) / rect.width) * W;
+    current = showAt(Math.round(((px - L) / pw) * (series.length - 1)));
+  });
+  hit.addEventListener("pointerleave", () => { cross.setAttribute("opacity", 0); tip.classList.remove("on"); });
+  hit.addEventListener("focus", () => { current = showAt(current); });
+  hit.addEventListener("blur", () => { cross.setAttribute("opacity", 0); tip.classList.remove("on"); });
+  hit.addEventListener("keydown", ev => {
+    if (ev.key === "ArrowLeft") { current = showAt(current - 1); ev.preventDefault(); }
+    if (ev.key === "ArrowRight") { current = showAt(current + 1); ev.preventDefault(); }
+  });
+}
+
+function renderLines(rows) {
+  const lineRows = rows.filter(r => r.line != null);
+  $("lines-sub").textContent = `${lineRows.length} ligne(s) Winamax evaluee(s). Les modeles sont compares a la ligne du bookmaker sur le PRA reel.`;
+  const table = $("lines-table");
+  const head = el("tr"); head.append(el("th", {}, "Indicateur"));
+  [...MODELS, { label: "Ligne Winamax", color: "var(--muted)" }].forEach(m => {
+    const th = el("th"); const key = el("span", { class: "key" }); key.style.borderTopColor = m.color; th.append(key, document.createTextNode(m.label)); head.append(th);
+  });
+  const thead = el("thead"); thead.append(head);
+  const tbody = el("tbody");
+
+  const maes = [...MODELS.map(m => (lineRows.length ? mean(lineRows.map(r => Math.abs(r.est[m.key].pra - r.actual.pra))) : null)),
+                lineRows.length ? mean(lineRows.map(r => Math.abs(r.line - r.actual.pra))) : null];
+  const dirs = MODELS.map(m => directionStats(lineRows, m.key));
+  const overShare = lineRows.filter(r => r.actual.pra !== r.line).length
+    ? lineRows.filter(r => r.actual.pra > r.line).length / lineRows.filter(r => r.actual.pra !== r.line).length : null;
+  const margin = mean(lineRows.filter(r => r.overOdd && r.underOdd).map(r => 1 / r.overOdd + 1 / r.underOdd - 1));
+
+  const addRow = (label, cells, bestMode, hint) => {
+    const tr = el("tr"); tr.append(el("td", { class: "label", title: hint || "" }, label));
+    const numeric = cells.map(c => (c == null ? null : c.raw));
+    const best = bestMode ? bestIndex(numeric.slice(0, bestMode.upto), bestMode.lower, false) : -1;
+    const tied = i => best >= 0 && cells[i] != null && cells[i].text === cells[best].text;
+    cells.forEach((c, i) => tr.append(el("td", { class: c == null ? "na" : tied(i) ? "best" : "" }, c == null ? "—" : c.text + (tied(i) ? " ✓" : ""))));
+    tbody.append(tr);
+  };
+  const c = (raw, text) => (raw == null ? null : { raw, text });
+
+  addRow("Erreur moyenne sur le PRA (MAE)", maes.map(v => c(v, fmt(v, 2))), { lower: true, upto: MODELS.length + 1 }, "Le plus bas gagne ; la ligne Winamax sert de reference.");
+  addRow("Direction : reussite", [...dirs.map(d => c(d.hit, fmtPct(d.hit))), null], { lower: false, upto: MODELS.length }, "Le reel est du cote annonce par le modele par rapport a la ligne.");
+  addRow("   nombre de cas", [...dirs.map(d => c(d.n, String(d.n))), null], null);
+  addRow(`Signal fort (ecart ≥ ${STRONG_GAP}) : reussite`, [...dirs.map(d => c(d.strongHit, fmtPct(d.strongHit))), null], { lower: false, upto: MODELS.length });
+  addRow("   nombre de cas", [...dirs.map(d => c(d.strongN, String(d.strongN))), null], null);
+  addRow("Seuil d'equilibre aux cotes enregistrees", [...dirs.map(d => c(d.breakeven, fmtPct(d.breakeven))), null], null, "Reussite minimale pour ne pas perdre.");
+  addRow("Rendement theorique (mise 1 par pari)", [...dirs.map(d => c(d.roi, d.roi == null ? "—" : fmtSigned(d.roi * 100, 1) + " %")), null], { lower: false, upto: MODELS.length }, "Indicateur de suivi, instable sur petit echantillon.");
+  const calib = el("tr"); calib.append(el("td", { class: "label", title: "Une ligne bien calibree donne environ 50 %." }, "« Plus » sorti (calibration de la ligne)"),
+    ...MODELS.map(() => el("td", {}, "")), el("td", {}, fmtPct(overShare)));
+  tbody.append(calib);
+  const m2 = el("tr"); m2.append(el("td", { class: "label", title: "1/cote Plus + 1/cote Moins − 1" }, "Marge moyenne du bookmaker"),
+    ...MODELS.map(() => el("td", {}, "")), el("td", {}, fmtPct(margin, 1)));
+  tbody.append(m2);
+  table.replaceChildren(thead, tbody);
+}
+
+function renderWinner(history) {
+  const finals = Object.values(history.matches).filter(m => m.status === "final" && m.score && m.odd1 && m.odd2 && m.odd1 !== m.odd2);
+  let wins = 0, probs = [], brier = [];
+  for (const m of finals) {
+    const p1 = (1 / m.odd1) / (1 / m.odd1 + 1 / m.odd2);
+    const s1 = m.score[m.team1], s2 = m.score[m.team2];
+    const t1won = s1 > s2;
+    const fav1 = m.odd1 < m.odd2;
+    if (t1won === fav1) wins++;
+    probs.push(fav1 ? p1 : 1 - p1);
+    brier.push((p1 - (t1won ? 1 : 0)) ** 2);
+  }
+  const tiles = [
+    ["Matchs evalues", String(finals.length), "avec cotes et score"],
+    ["Favoris gagnants", finals.length ? fmtPct(wins / finals.length) : "—", `${wins} sur ${finals.length}`],
+    ["Probabilite implicite du favori", finals.length ? fmtPct(mean(probs)) : "—", "moyenne, marge retiree"],
+    ["Score de Brier", finals.length ? fmt(mean(brier), 3) : "—", "0 = parfait, 0,25 = pile ou face"],
+  ];
+  $("winner-tiles").replaceChildren(...tiles.map(([label, value, hint]) => {
+    const t = el("div", { class: "tile" }); t.append(el("div", { class: "label" }, label), el("div", { class: "value" }, value), el("div", { class: "hint" }, hint)); return t;
+  }));
+}
+
+function renderDetail(rows) {
+  const last = [...rows].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : a.player.localeCompare(b.player))).slice(0, 40);
+  $("detail-sub").textContent = rows.length
+    ? `Les ${last.length} derniers sur ${rows.length}. Erreur = estimation − reel (PRA).`
+    : "Aucune donnee a afficher pour l'instant.";
+  const table = $("detail-table");
+  if (!rows.length) { table.replaceChildren(); return; }
+  const hr = el("tr");
+  ["Date", "Joueur", "Adversaire", "Min", "Ligne", "Reel", "Implication", "Err.", "Impl. + poste", "Err.", "Moy. saison", "Err."].forEach(h => hr.append(el("th", {}, h)));
+  const thead = el("thead"); thead.append(hr);
+  const tbody = el("tbody");
+  last.forEach(r => {
+    const tr = el("tr");
+    const err = e => el("td", {}, fmtSigned(e - r.actual.pra, 1));
+    const playerCell = el("td"); playerCell.innerHTML = `<span class="player-cell">${avatar(r.player, null, 24)}<span>${avatarEsc(r.player)}</span></span>`;
+    tr.append(el("td", {}, fmtDate(r.date)), playerCell, el("td", {}, r.opponent), el("td", {}, fmt(r.mp, 0)),
+      el("td", {}, r.line == null ? "—" : fmt(r.line, 1)), el("td", { class: "best" }, String(r.actual.pra)),
+      el("td", {}, fmt(r.est.implication.pra, 1)), err(r.est.implication.pra),
+      el("td", {}, fmt(r.est.implicationPoste.pra, 1)), err(r.est.implicationPoste.pra),
+      el("td", {}, fmt(r.est.baseline.pra, 1)), err(r.est.baseline.pra));
+    tbody.append(tr);
+  });
+  table.replaceChildren(thead, tbody);
+}
+
+function render() {
+  const { history } = state;
+  const built = buildRows(history);
+  const all = built.rows;
+  const rows = applyFilters(all);
+  const matches = Object.values(history.matches);
+  const final = matches.filter(m => m.status === "final").length;
+
+  $("meta").textContent = matches.length
+    ? `${matches.length} match(s) suivi(s), ${final} termine(s) — ${all.length} joueur(s)-match(s) complet(s)${built.incomplete ? `, ${built.incomplete} sans les trois estimations (exclus)` : ""}`
+    : "Aucun match suivi pour l'instant.";
+
+  $("acc-sub").textContent = `${rows.length} joueur(s)-match(s) ; comparaison sur l'echantillon commun. ✓ = meilleur de la ligne. Erreurs en points, rebonds ou passes (PRA = somme).`;
+  renderNotice(rows);
+  renderTiles(history, built, rows);
+  renderBars(rows);
+  renderAccuracyTable(rows);
+  renderTrend(rows);
+  renderLines(rows);
+  renderWinner(history);
+  renderDetail(rows);
+}
+
+function buildCsv() {
+  const header = ["date", "match_id", "joueur", "equipe", "adversaire", "minutes", "ligne_pra", "cote_plus", "cote_moins",
+    "reel_pts", "reel_reb", "reel_ast", "implication_pts", "implication_reb", "implication_ast",
+    "implposte_pts", "implposte_reb", "implposte_ast", "saison_pts", "saison_reb", "saison_ast"];
+  const lines = [header.join(";")];
+  for (const r of buildRows(state.history).rows) {
+    const e = r.est;
+    lines.push([r.date, r.matchId, r.player, r.team, r.opponent, r.mp, r.line, r.overOdd, r.underOdd,
+      r.actual.pts, r.actual.reb, r.actual.ast, e.implication.pts, e.implication.reb, e.implication.ast,
+      e.implicationPoste.pts, e.implicationPoste.reb, e.implicationPoste.ast, e.baseline.pts, e.baseline.reb, e.baseline.ast]
+      .map(csvCell).join(";"));
+  }
+  return lines.join("\n");
+}
+
+function exportCsv() {
+  const blob = new Blob([String.fromCharCode(0xFEFF) + buildCsv()], { type: "text/csv;charset=utf-8" });
+  const a = el("a", { href: URL.createObjectURL(blob), download: "suivi-modeles.csv" });
+  document.body.append(a); a.click(); a.remove();
+}
+
+async function init() {
+  try {
+    const res = await fetch("data/history.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("data/history.json introuvable : lancez start.bat (ou track_history.py) pour demarrer le suivi.");
+    state.history = await res.json();
+    await loadPhotos();
+  } catch (err) {
+    $("meta").textContent = "";
+    $("tiles").replaceChildren(el("div", { class: "empty" }, err.message));
+    return;
+  }
+  $("f-period").addEventListener("change", e => { state.period = e.target.value; rerender(); });
+  $("f-minutes").addEventListener("change", e => { state.minutes = Number(e.target.value); rerender(); });
+  $("f-scope").addEventListener("change", e => { state.scope = e.target.value; rerender(); });
+  $("f-stat").addEventListener("change", e => { state.stat = e.target.value; rerender(); });
+  $("trend-toggle").addEventListener("click", () => { state.trendTable = !state.trendTable; render(); });
+  $("export-btn").addEventListener("click", exportCsv);
+  render();
+}
+
+// les filtres re-rendent tout (graphiques, tableaux, tuiles) avec la meme tranche de donnees
+function rerender() { render(); }
+
+init();
+</script>
+<script src="site.js"></script>
+</body>
+</html>
