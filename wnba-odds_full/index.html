@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Cotes NBA - Winamax</title>
+<style>
+  :root {
+    --bg: #0f1216;
+    --panel: #171b21;
+    --border: #262b33;
+    --text: #e8eaed;
+    --muted: #8b93a1;
+    --accent: #ff6a13;
+    --odd-normal: #3a3f4a;
+    --warn: #e0b341;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 20px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+  h1 .logo { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  nav.tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  nav.tabs a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  nav.tabs a.active { color: var(--text); border-color: var(--accent); }
+  .notice {
+    border: 1px solid var(--warn);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .notice strong { color: var(--warn); }
+  .match {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 14px;
+    overflow-x: auto;
+  }
+  .match-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    flex-wrap: wrap;
+  }
+  .match-title { font-weight: 600; font-size: 15px; }
+  .match-date { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .odd {
+    display: inline-block;
+    min-width: 52px;
+    text-align: center;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: var(--odd-normal);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .winner-odds { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  td.muted, .muted { color: var(--muted); }
+  .team-line { display: flex; align-items: center; gap: 8px; }
+  .logo-img { width: 26px; height: 26px; object-fit: contain; flex-shrink: 0; }
+  .logo-sm { width: 18px; height: 18px; object-fit: contain; vertical-align: -4px; margin-right: 8px; }
+  .diff-pos { color: var(--muted); }
+  /* value : « Plus de » = estimation au-dessus de la ligne, « Moins de » = en dessous.
+     La couleur est doublee d'une fleche (lisible sans distinguer les couleurs). */
+  :root { --over: #3ccf8e; --under: #f08a5d; }
+  .chip { display: inline-block; padding: 3px 9px; border-radius: 999px; font-weight: 700; border: 1px solid; white-space: nowrap; }
+  .chip.over  { color: var(--over);  background: rgba(60, 207, 142, 0.14); border-color: rgba(60, 207, 142, 0.55); }
+  .chip.under { color: var(--under); background: rgba(240, 138, 93, 0.14); border-color: rgba(240, 138, 93, 0.55); }
+  .odd.flag-over  { box-shadow: 0 0 0 2px var(--over); }
+  .odd.flag-under { box-shadow: 0 0 0 2px var(--under); }
+  tr.agree-over  td { background: rgba(60, 207, 142, 0.07); }
+  tr.agree-under td { background: rgba(240, 138, 93, 0.07); }
+  tr.agree-over  td:first-child { box-shadow: inset 4px 0 0 var(--over); }
+  tr.agree-under td:first-child { box-shadow: inset 4px 0 0 var(--under); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: 12px; color: var(--muted); margin: -8px 0 18px; }
+  .legend .bar { display: inline-block; width: 4px; height: 16px; border-radius: 2px; vertical-align: -4px; margin-right: 6px; }
+  td.est { font-weight: 600; }
+  td.diff-pos { border-right: 1px solid var(--border); }
+  td.diff-pos:last-child { border-right: none; }
+  .none { padding: 12px 16px 16px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--border); }
+  .error { padding: 40px; text-align: center; color: #f0876e; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; }
+  footer { margin-top: 20px; font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; }
+  @media (max-width: 640px) {
+    body { padding: 20px 12px; }
+    th, td { padding: 8px 6px; font-size: 12px; }
+  }
+
+  /* avatars joueurs : photo ronde (ou initiales) + petit badge du club */
+  .avatar-wrap { position: relative; display: inline-block; flex-shrink: 0; vertical-align: middle; }
+  .avatar { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: center top; background: #2b313b; }
+  .avatar.ph { display: flex; align-items: center; justify-content: center; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; border: 1px solid var(--border); }
+  .avatar-badge { position: absolute; right: -4px; bottom: -4px; width: 46%; height: 46%; object-fit: contain; border-radius: 50%; background: var(--panel); padding: 1px; }
+  .player-cell { display: inline-flex; align-items: center; gap: 10px; }
+  .player-cell > span:last-child { white-space: nowrap; }
+  a.player-link { color: inherit; text-decoration: none; display: inline-block; border-radius: 6px; }
+  a.player-link:hover > .player-cell > span:last-child, a.player-link:focus-visible > .player-cell > span:last-child { color: var(--accent); text-decoration: underline; }
+  a.player-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1><span class="logo"></span>Cotes NBA</h1>
+    <div class="meta" id="meta">Chargement...</div>
+    <nav class="tabs">
+      <a href="index.html" class="active">Cotes NBA</a>
+      <a href="predicteur-nba.html">Estimateur NBA</a>
+      <a href="stat-joueur.html">Stat du joueur</a>
+      <a href="suivi.html">Suivi des modeles</a>
+      <a href="suivi-paris.html">Suivi des paris</a>
+    </nav>
+
+    <div class="notice">
+      <strong>A lire avant d'interpreter l'ecart.</strong>
+      Les estimations du modele reposent uniquement sur les matchs deja joues cette saison
+      (2026-27) : en debut de saison l'echantillon est petit, donc les estimations sont encore
+      tres instables et evoluent vite. La colonne « Moy. saison » sert de repere ; un ecart
+      « modele - ligne » n'est pas, a lui seul, un signal fiable. « Implication » = estimation du modele d'implication
+      (part du joueur dans la production de son equipe x ce que l'adversaire concede) ; « Impl. + poste » = la meme estimation
+      corrigee par ce que l'adversaire concede au poste du joueur (variante suivie en parallele dans l'onglet Suivi, pas encore validee) ;
+      « Ecart » = estimation - ligne Winamax.
+    </div>
+
+    <div class="legend" id="legend">
+      <span><span class="chip over">+4,2 ▲</span> value « Plus de » : estimation au-dessus de la ligne</span>
+      <span><span class="chip under">−4,2 ▼</span> value « Moins de » : estimation en dessous</span>
+      <span><span class="bar" style="background:var(--over)"></span><span class="bar" style="background:var(--under)"></span>barre = les deux modeles sont d'accord</span>
+      <span>Seuil : ecart ≥ 0,5 ecart-type du joueur (≈ 3 a 5 pts selon le joueur) — provisoire</span>
+    </div>
+
+    <div id="content"></div>
+
+    <footer>Cotes : Winamax &middot; Estimation : modele d'implication (+ variante par poste), saison 2026-27 en cours &middot; Relancez start.bat pour rafraichir</footer>
+  </div>
+
+<script>
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// Winamax et le modele n'ecrivent pas toujours les noms pareil (accents, ponctuation,
+// suffixes : "Trey Murphy" vs "Trey Murphy III").
+const NAME_SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv"]);
+function norm(name) {
+  const tokens = name.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase()
+    .replace(/[^a-z0-9 ]/g, "").split(/\s+/).filter(Boolean);
+  while (tokens.length > 2 && NAME_SUFFIXES.has(tokens[tokens.length - 1])) tokens.pop();
+  return tokens.join("");
+}
+
+function fmtDate(ts) {
+  return new Date(ts * 1000).toLocaleString("fr-FR", {
+    weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+  });
+}
+
+let LOGOS = {};
+function logo(team, cls) {
+  const src = LOGOS[team];
+  return src ? `<img class="${cls}" src="${esc(src)}" alt="${esc(team)}" title="${esc(team)}">` : "";
+}
+
+
+let PHOTOS = {};
+const NAME_SUFFIXES_AV = new Set(["jr", "sr", "ii", "iii", "iv"]);
+function normAvatar(name) {
+  const tokens = name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, "").split(" ").filter(Boolean);
+  while (tokens.length > 2 && NAME_SUFFIXES_AV.has(tokens[tokens.length - 1])) tokens.pop();
+  return tokens.join("");
+}
+function avatarEsc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+// Photo du joueur (cache local) ou, a defaut, ses initiales ; badge = logo du club, si on le connait.
+function avatar(name, team, size = 32) {
+  const src = PHOTOS[normAvatar(name)];
+  const tokens = name.split(" ").filter(Boolean);
+  const initials = ((tokens[0] || "?")[0] + (tokens.length > 1 ? tokens[tokens.length - 1][0] : "")).toUpperCase();
+  const face = src
+    ? `<img class="avatar" src="${avatarEsc(src)}" alt="" loading="lazy">`
+    : `<span class="avatar ph" style="font-size:${Math.round(size * 0.36)}px">${avatarEsc(initials)}</span>`;
+  const logoSrc = typeof LOGOS !== "undefined" && team ? LOGOS[team] : null;
+  const badge = logoSrc ? `<img class="avatar-badge" src="${avatarEsc(logoSrc)}" alt="" title="${avatarEsc(team)}">` : "";
+  return `<span class="avatar-wrap" style="width:${size}px;height:${size}px" title="${avatarEsc(name)}">${face}${badge}</span>`;
+}
+async function loadPhotos() {
+  try {
+    const res = await fetch("photos/players.json", { cache: "no-store" });
+    PHOTOS = res.ok ? await res.json() : {};
+  } catch (err) { PHOTOS = {}; }   // les photos sont decoratives : l'appli marche sans
+}
+
+function odd(v, side) { return `<span class="odd${side ? " flag-" + side : ""}">${v ?? "—"}</span>`; }
+function fmtLine(v) { return v == null ? "—" : String(v).replace(".", ","); }
+
+// « Value » = ecart modele - ligne d'au moins VALUE_Z ecarts-types du joueur (variabilite match a match
+// de son PRA, voir praSpread dans nba_predictions.json). Seuil provisoire, a recaler sur le Suivi.
+let VALUE_Z = 0.5;   // remplace par la valeur de nba_predictions.json (valueZ) au chargement
+const SIDE = { over: { arrow: "▲", word: "Plus de" }, under: { arrow: "▼", word: "Moins de" } };
+
+function valueSide(est, line, sd) {
+  if (est == null || line == null || !sd) return null;
+  const z = (est - line) / sd;
+  return Math.abs(z) >= VALUE_Z ? (z > 0 ? "over" : "under") : null;
+}
+
+function gapCell(est, line, side, sd) {
+  if (est == null || line == null) return `<td class="diff-pos">—</td>`;
+  const g = est - line, text = (g >= 0 ? "+" : "") + g.toFixed(1);
+  if (!side) return `<td class="diff-pos">${text}</td>`;
+  const tip = `Value ${SIDE[side].word} : ecart de ${Math.abs(g / sd).toFixed(2).replace(".", ",")} ecart-type du joueur (variabilite typique du PRA : ${sd.toFixed(1).replace(".", ",")} pts)`;
+  return `<td class="diff-pos"><span class="chip ${side}" title="${esc(tip)}">${text} ${SIDE[side].arrow}</span></td>`;
+}
+
+function praRow(p, match, predIndex) {
+  const opponent = p.team === 1 ? match.team2 : match.team1;
+  const key = predIndex.names[norm(p.player)];
+  const model = key ? predIndex.players[key] : null;
+
+  const total = e => e.pts + e.reb + e.ast;
+  const sd = model && model.praSpread ? model.praSpread.sd : null;
+
+  let avg = "—", involvement = "—", position = "—", invEst = null, posEst = null;
+  if (model) {
+    const b = model.baseline;
+    avg = (b.pts + b.reb + b.ast).toFixed(1);
+  }
+  const invPrediction = model && model.involvement ? model.involvement.predictions[opponent] : null;
+  if (invPrediction) {
+    invEst = total(invPrediction);
+    involvement = invEst.toFixed(1);
+  }
+  const posAdjusted = model && model.involvement && model.involvement.positionAdjusted ? model.involvement.positionAdjusted[opponent] : null;
+  if (posAdjusted) {
+    posEst = total(posAdjusted);
+    position = posEst.toFixed(1);
+  }
+
+  const invSide = valueSide(invEst, p.line, sd), posSide = valueSide(posEst, p.line, sd);
+  // la barre de la ligne n'apparait que si les DEUX modeles voient une value du meme cote
+  const agree = invSide && invSide === posSide ? invSide : null;
+  // les cotes du cote concerne sont mises en avant des qu'un des deux modeles signale une value
+  const overFlag = invSide === "over" || posSide === "over" ? "over" : null;
+  const underFlag = invSide === "under" || posSide === "under" ? "under" : null;
+
+  // le nom ouvre l'Estimateur sur ce joueur et son adversaire du jour (uniquement si le modele connait le joueur)
+  const cell = `<span class="player-cell">${avatar(p.player, p.team === 1 ? match.team1 : match.team2, 34)}<span>${esc(p.player)}</span></span>`;
+  const href = key ? `predicteur-nba.html?player=${encodeURIComponent(key)}&team=${encodeURIComponent(opponent)}` : null;
+  const playerCell = href ? `<a class="player-link" href="${esc(href)}" title="Voir ${esc(p.player)} face a ${esc(opponent)} dans l'Estimateur">${cell}</a>` : cell;
+
+  return `<tr${agree ? ` class="agree-${agree}"` : ""}>
+    <td>${playerCell}</td>
+    <td>${fmtLine(p.line)}</td>
+    <td>${odd(p.overOdd, overFlag)}</td>
+    <td>${odd(p.underOdd, underFlag)}</td>
+    <td class="muted">${avg}</td>
+    <td class="est">${involvement}</td>
+    ${gapCell(invEst, p.line, invSide, sd)}
+    <td class="est">${position}</td>
+    ${gapCell(posEst, p.line, posSide, sd)}
+  </tr>`;
+}
+
+function renderMatch(match, predIndex) {
+  const players = match.playerTotalPRA || [];
+  const body = players.length
+    ? `<table>
+        <thead><tr>
+          <th>Joueur</th><th>Ligne PRA</th><th>Plus de</th><th>Moins de</th>
+          <th>Moy. saison</th><th>Implication</th><th>Ecart</th><th>Impl. + poste</th><th>Ecart</th>
+        </tr></thead>
+        <tbody>${players.map(p => praRow(p, match, predIndex)).join("")}</tbody>
+      </table>`
+    : `<div class="none">Marche PRA pas encore ouvert par Winamax pour ce match (il apparait en general quelques heures avant le coup d'envoi).</div>`;
+
+  return `<section class="match">
+    <div class="match-head">
+      <div>
+        <div class="match-title team-line">
+          ${logo(match.team1, "logo-img")}${esc(match.team1)}
+          <span class="muted">&ndash;</span>
+          ${logo(match.team2, "logo-img")}${esc(match.team2)}
+        </div>
+        <div class="match-date">${fmtDate(match.matchStart)}</div>
+      </div>
+      <div class="winner-odds">Vainqueur ${odd(match.odd1)} ${odd(match.odd2)}</div>
+    </div>
+    ${body}
+  </section>`;
+}
+
+async function load() {
+  const meta = document.getElementById("meta");
+  const content = document.getElementById("content");
+  try {
+    const [oddsRes, predRes, logosRes] = await Promise.all([
+      fetch("data/nba_odds.json", { cache: "no-store" }),
+      fetch("data/nba_predictions.json", { cache: "no-store" }),
+      fetch("logos/teams.json", { cache: "no-store" }),
+    ]);
+    LOGOS = logosRes.ok ? await logosRes.json() : {};
+    await loadPhotos();
+    if (!oddsRes.ok) throw new Error("data/nba_odds.json introuvable (lancez d'abord nba_scraper.py)");
+    if (!predRes.ok) throw new Error("data/nba_predictions.json introuvable (lancez start.bat ou build_estimates.py)");
+    const odds = await oddsRes.json();
+    const preds = await predRes.json();
+    if (typeof preds.valueZ === "number") VALUE_Z = preds.valueZ;
+
+    const names = {};
+    for (const n of Object.keys(preds.players)) names[norm(n)] = n;
+    const predIndex = { players: preds.players, names };
+
+    const withPra = odds.matches.filter(m => (m.playerTotalPRA || []).length).length;
+    meta.textContent = `Cotes du ${new Date(odds.scrapedAt).toLocaleString("fr-FR")} — ${odds.matches.length} match(s) aujourd'hui/demain, ${withPra} avec marche PRA`;
+
+    if (!odds.matches.length) {
+      content.innerHTML = "<div class=\"error\" style=\"color:var(--muted)\">Aucun match NBA aujourd'hui ni demain sur Winamax.</div>";
+      return;
+    }
+    content.innerHTML = odds.matches.map(m => renderMatch(m, predIndex)).join("");
+  } catch (err) {
+    meta.textContent = "";
+    content.innerHTML = `<div class="error">${esc(err.message)}</div>`;
+  }
+}
+
+load();
+</script>
+<script src="site.js"></script>
+</body>
+</html>

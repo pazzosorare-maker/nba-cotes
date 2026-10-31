@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stat du joueur - NBA</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0f1216;
+    --panel: #171b21;
+    --border: #262b33;
+    --text: #e8eaed;
+    --text-2: #c3c2b7;
+    --muted: #8b93a1;
+    --accent: #ff6a13;
+    --grid: #262b33;
+    --axis: #3a404b;
+    --s1: #3987e5;   /* points (et serie principale) */
+    --s2: #d95926;   /* rebonds */
+    --s3: #199e70;   /* passes */
+    --ref: #8b93a1;  /* reference : moyenne de saison */
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 20px;
+    background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+  h1 .logo { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  h2 { font-size: 16px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 12px; margin-bottom: 12px; line-height: 1.5; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  nav.tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  nav.tabs a { color: var(--muted); text-decoration: none; font-size: 13px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; }
+  nav.tabs a.active { color: var(--text); border-color: var(--accent); }
+
+  .panel, section.card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 18px; }
+  .searchrow { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .searchrow .field { flex: 1; min-width: 240px; }
+  label { display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 10px 12px; border-radius: 6px; font-size: 14px; font-family: inherit;
+  }
+  button {
+    background: var(--accent); color: #1a0f08; border: none; padding: 10px 20px; border-radius: 6px;
+    font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  button:hover { filter: brightness(1.08); }
+  .error { color: #f0876e; font-size: 13px; margin-top: 10px; min-height: 1em; }
+
+  .player-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+  .player-head .name { font-size: 22px; font-weight: 600; }
+  .player-head .info { color: var(--muted); font-size: 13px; }
+  .notice { border: 1px solid var(--axis); border-radius: 8px; padding: 9px 12px; font-size: 12px; color: var(--text-2); margin: 10px 0 0; line-height: 1.5; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 6px 0 12px; }
+  .tile { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .tile .label { font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0; margin: 0; }
+  .tile .value { font-size: 30px; font-weight: 600; margin-top: 2px; }
+  .tile.small .value { font-size: 20px; }
+
+  table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.grid th {
+    text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+    padding: 8px 8px; border-bottom: 1px solid var(--border); font-weight: 500; white-space: nowrap;
+  }
+  table.grid td { text-align: right; padding: 8px 8px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.grid th.l, table.grid td.l { text-align: left; }
+  table.grid tr.sum td { font-weight: 600; border-top: 1px solid var(--axis); }
+  table.grid tr.delta td { color: var(--muted); }
+  table.grid tr:last-child td { border-bottom: none; }
+  .team-cell { display: inline-flex; align-items: center; gap: 8px; }
+  .team-cell img { width: 18px; height: 18px; object-fit: contain; }
+  .rowscroll { overflow-x: auto; }
+  .pos { color: #3fb950; } .neg { color: #f0876e; }
+
+  /* implication : barres comparees (saison en gris, 5 derniers matchs en accent) */
+  .share-row { display: grid; grid-template-columns: 90px 1fr 70px; gap: 6px 12px; align-items: center; margin-bottom: 14px; }
+  .share-row .lbl { color: var(--text-2); font-size: 13px; }
+  .share-bars { display: flex; flex-direction: column; gap: 3px; }
+  .bar-line { display: flex; align-items: center; gap: 8px; }
+  .bar-track { flex: 1; height: 8px; border-radius: 4px; background: var(--grid); overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 0 4px 4px 0; }
+  .bar-val { width: 58px; text-align: right; font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .share-delta { text-align: right; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--text-2); margin: 4px 0 10px; }
+  .key { display: inline-block; width: 14px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 6px; border-radius: 1px; }
+  .key.bar { border-top-width: 6px; }
+
+  .chartbox { position: relative; }
+  svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+  svg text { font-family: inherit; fill: var(--muted); font-size: 11px; }
+  svg text.val { fill: var(--text-2); }
+  svg text.seg { fill: #ffffff; font-weight: 600; pointer-events: none; }
+  svg text.halo { paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+  .tooltip {
+    position: absolute; pointer-events: none; z-index: 5; min-width: 170px; background: var(--bg);
+    border: 1px solid var(--axis); border-radius: 8px; padding: 8px 10px; font-size: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.45); opacity: 0; transition: opacity 0.08s;
+  }
+  .tooltip.on { opacity: 1; }
+  .tooltip .th { color: var(--muted); margin-bottom: 4px; }
+  .tooltip .v { font-weight: 700; font-size: 14px; }
+  .tooltip .tr { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+  .tooltip .tr .v { min-width: 24px; text-align: right; font-size: 13px; }
+  .tooltip .tr .n { color: var(--text-2); }
+  .empty { color: var(--muted); font-size: 13px; padding: 14px 2px; }
+  footer { margin-top: 20px; font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; }
+  @media (max-width: 640px) {
+    body { padding: 20px 12px; }
+    .share-row { grid-template-columns: 70px 1fr; }
+    .share-delta { grid-column: 2; text-align: left; }
+  }
+
+  /* avatars joueurs : photo ronde (ou initiales) + petit badge du club */
+  .avatar-wrap { position: relative; display: inline-block; flex-shrink: 0; vertical-align: middle; }
+  .avatar { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: center top; background: #2b313b; }
+  .avatar.ph { display: flex; align-items: center; justify-content: center; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; border: 1px solid var(--border); }
+  .avatar-badge { position: absolute; right: -4px; bottom: -4px; width: 46%; height: 46%; object-fit: contain; border-radius: 50%; background: var(--panel); padding: 1px; }
+  .player-cell { display: inline-flex; align-items: center; gap: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="logo"></span>Stat du joueur</h1>
+  <div class="meta" id="meta">Chargement...</div>
+  <nav class="tabs">
+    <a href="index.html">Cotes NBA</a>
+    <a href="predicteur-nba.html">Estimateur NBA</a>
+    <a href="stat-joueur.html" class="active">Stat du joueur</a>
+    <a href="suivi.html">Suivi des modeles</a>
+    <a href="suivi-paris.html">Suivi des paris</a>
+  </nav>
+
+  <div class="panel">
+    <div class="searchrow">
+      <div class="field">
+        <label for="player-input">Joueur</label>
+        <input id="player-input" list="player-list" placeholder="Ex : Jalen Johnson (ATL)" autocomplete="off">
+        <datalist id="player-list"></datalist>
+      </div>
+      <button id="go-btn" type="button">Afficher</button>
+    </div>
+    <div class="error" id="error"></div>
+  </div>
+
+  <div id="result"></div>
+
+  <footer>Donnees : basketball-reference.com (saison en cours) &middot; mises a jour a chaque lancement de start.bat</footer>
+</div>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const SVG_NS = "http://www.w3.org/2000/svg";
+const NAME_SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv"]);
+let DATA = null, LOGOS = {}, BY_NORM = {};
+
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function norm(name) {
+  const tokens = name.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, "").split(/\s+/).filter(Boolean);
+  while (tokens.length > 2 && NAME_SUFFIXES.has(tokens[tokens.length - 1])) tokens.pop();
+  return tokens.join("");
+}
+function fmt(v, d = 1) { return v == null || Number.isNaN(v) ? "—" : v.toFixed(d).replace(".", ","); }
+function fmtSigned(v, d = 1) { return v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(d).replace(".", ","); }
+function fmtPct(v, d = 1) { return v == null ? "—" : (v * 100).toFixed(d).replace(".", ",") + " %"; }
+function fmtDate(iso) { const [, m, d] = iso.split("-"); return `${d}/${m}`; }
+function logo(team, size = 18) {
+  const src = LOGOS[team];
+  return src ? `<img src="${esc(src)}" alt="${esc(team)}" title="${esc(team)}" width="${size}" height="${size}">` : "";
+}
+function svgEl(tag, attrs = {}, text) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (text != null) node.textContent = text;
+  return node;
+}
+function niceMax(v) {
+  // maximum de l'axe = 4 graduations regulieres de pas « rond » (1, 1.5, 2, 2.5, 3, 4, 5 ou 10 x 10^k)
+  if (!(v > 0)) return 1;
+  const raw = v / 4, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 1.5, 2, 2.5, 3, 4, 5, 10].map(m => m * p).find(s => s >= raw - 1e-9);
+  return step * 4;
+}
+const pra = o => o.pts + o.reb + o.ast;
+
+
+let PHOTOS = {};
+const NAME_SUFFIXES_AV = new Set(["jr", "sr", "ii", "iii", "iv"]);
+function normAvatar(name) {
+  const tokens = name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, "").split(" ").filter(Boolean);
+  while (tokens.length > 2 && NAME_SUFFIXES_AV.has(tokens[tokens.length - 1])) tokens.pop();
+  return tokens.join("");
+}
+function avatarEsc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+// Photo du joueur (cache local) ou, a defaut, ses initiales ; badge = logo du club, si on le connait.
+function avatar(name, team, size = 32) {
+  const src = PHOTOS[normAvatar(name)];
+  const tokens = name.split(" ").filter(Boolean);
+  const initials = ((tokens[0] || "?")[0] + (tokens.length > 1 ? tokens[tokens.length - 1][0] : "")).toUpperCase();
+  const face = src
+    ? `<img class="avatar" src="${avatarEsc(src)}" alt="" loading="lazy">`
+    : `<span class="avatar ph" style="font-size:${Math.round(size * 0.36)}px">${avatarEsc(initials)}</span>`;
+  const logoSrc = typeof LOGOS !== "undefined" && team ? LOGOS[team] : null;
+  const badge = logoSrc ? `<img class="avatar-badge" src="${avatarEsc(logoSrc)}" alt="" title="${avatarEsc(team)}">` : "";
+  return `<span class="avatar-wrap" style="width:${size}px;height:${size}px" title="${avatarEsc(name)}">${face}${badge}</span>`;
+}
+async function loadPhotos() {
+  try {
+    const res = await fetch("photos/players.json", { cache: "no-store" });
+    PHOTOS = res.ok ? await res.json() : {};
+  } catch (err) { PHOTOS = {}; }   // les photos sont decoratives : l'appli marche sans
+}
+
+/* ----------------------------------------------------------------- rendu */
+function deltaClass(d, goodWhenUp = true) { return Math.abs(d) < 0.05 ? "" : (d > 0) === goodWhenUp ? "pos" : "neg"; }
+
+function renderSeason(p) {
+  const s = p.season;
+  const main = [["Points", s.pts], ["Rebonds", s.reb], ["Passes", s.ast], ["PRA", s.pts + s.reb + s.ast]];
+  const small = [
+    ["Minutes", fmt(s.mp)], ["Interceptions", fmt(s.stl)], ["Contres", fmt(s.blk)], ["Balles perdues", fmt(s.tov)], ["Fautes", fmt(s.pf)],
+    ["Tirs", fmtPct(s.fgPct)], ["3 points", fmtPct(s.fg3Pct)], ["Lancers francs", fmtPct(s.ftPct)], ["Adresse effective", fmtPct(s.efgPct)],
+  ];
+  const tile = (label, value, cls = "") => `<div class="tile ${cls}"><div class="label">${esc(label)}</div><div class="value">${value}</div></div>`;
+  return `<section class="card">
+    <h2>Moyennes de la saison</h2>
+    <div class="sub">${s.games} match(s) joue(s), ${s.gamesStarted} comme titulaire. Moyennes par match.</div>
+    <div class="tiles">${main.map(([l, v]) => tile(l, fmt(v))).join("")}</div>
+    <div class="tiles">${small.map(([l, v]) => tile(l, v, "small")).join("")}</div>
+  </section>`;
+}
+
+function renderShares(p) {
+  const season = p.shares.season, last = p.shares.last5;
+  const rows = [["Points", "pts"], ["Rebonds", "reb"], ["Passes", "ast"]];
+  if (!season && !last) return `<section class="card"><h2>Implication dans son equipe</h2><div class="empty">Indisponible pour ce joueur.</div></section>`;
+  const maxV = Math.max(0.05, ...rows.flatMap(([, k]) => [season ? season[k] : 0, last ? last[k] || 0 : 0]));
+  const scale = niceMax(maxV * 1.1);
+  const line = (value, color, label) => value == null ? "" :
+    `<div class="bar-line"><div class="bar-track" role="img" aria-label="${esc(label)} : ${fmtPct(value)}"><div class="bar-fill" style="width:${(value / scale) * 100}%;background:${color}"></div></div><div class="bar-val">${fmtPct(value)}</div></div>`;
+  const body = rows.map(([label, k]) => {
+    const a = season ? season[k] : null, b = last ? last[k] : null;
+    const d = a != null && b != null ? (b - a) * 100 : null;
+    return `<div class="share-row">
+      <div class="lbl">${label}</div>
+      <div class="share-bars">${line(a, "var(--ref)", `${label}, saison`)}${line(b, "var(--s1)", `${label}, 5 derniers matchs`)}</div>
+      <div class="share-delta">${d == null ? "" : `${fmtSigned(d)} pt`}</div>
+    </div>`;
+  }).join("");
+  return `<section class="card">
+    <h2>Implication dans son equipe</h2>
+    <div class="sub">Part de la production de son equipe portee par le joueur. Saison : moyenne par match du joueur / moyenne par match de l'equipe (le calcul du modele d'implication). 5 derniers matchs : total du joueur / total de l'equipe sur ces memes matchs.</div>
+    <div class="legend"><span><span class="key bar" style="border-top-color:var(--ref)"></span>Saison</span><span><span class="key bar" style="border-top-color:var(--s1)"></span>5 derniers matchs</span></div>
+    ${body}
+  </section>`;
+}
+
+// PRA decompose en trois blocs superposes : un bloc = une couleur (palette validee en mode sombre)
+const STACK = [
+  { key: "pts", label: "Points",  color: "var(--s1)" },
+  { key: "reb", label: "Rebonds", color: "var(--s2)" },
+  { key: "ast", label: "Passes",  color: "var(--s3)" },
+];
+const SEGMENT_GAP = 2;        // espace de la couleur du fond entre deux blocs empiles
+const MIN_LABEL_HEIGHT = 15;  // un chiffre n'est ecrit dans un bloc que s'il y tient (sinon : infobulle et tableau)
+
+function segmentPath(x, w, yBottom, yTop, roundTop) {
+  if (!roundTop) return `M${x},${yBottom} V${yTop} H${x + w} V${yBottom} Z`;
+  const r = Math.min(4, yBottom - yTop);   // extremite de donnee arrondie, base carree
+  return `M${x},${yBottom} V${yTop + r} Q${x},${yTop} ${x + r},${yTop} H${x + w - r} Q${x + w},${yTop} ${x + w},${yTop + r} V${yBottom} Z`;
+}
+
+function renderChartInto(box, p) {
+  const games = [...p.last5].reverse();           // du plus ancien au plus recent, de gauche a droite
+  const seasonPra = p.season.pts + p.season.reb + p.season.ast;
+  const totals = games.map(g => g.pts + g.reb + g.ast);
+  const maxV = niceMax(Math.max(seasonPra, ...totals) * 1.15);
+  const W = 640, H = 266, L = 36, R = 90, T = 14, B = 56, pw = W - L - R, ph = H - T - B;   // B : place du logo adverse + date sous l'axe
+  const LOGO_SIZE = 24;
+  const y = v => T + ph - (v / maxV) * ph;
+  const svg = svgEl("svg", { class: "chart", viewBox: `0 0 ${W} ${H}`, role: "img",
+    "aria-label": `PRA sur les ${games.length} derniers matchs, decompose en points, rebonds et passes, compare a la moyenne de saison (${fmt(seasonPra)}). Les valeurs figurent aussi dans le tableau ci-dessous.` });
+  for (let i = 0; i <= 4; i++) {
+    const v = (maxV / 4) * i;
+    svg.append(svgEl("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: i === 0 ? "var(--axis)" : "var(--grid)", "stroke-width": 1 }));
+    svg.append(svgEl("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end" }, fmt(v, v % 1 ? 1 : 0)));
+  }
+  const slot = pw / games.length, barW = Math.min(24, slot * 0.5);
+  const tip = document.createElement("div"); tip.className = "tooltip";
+  const valueLabels = [];   // dessines apres le trait de moyenne pour qu'il ne les barre pas
+
+  games.forEach((g, i) => {
+    const total = totals[i], cx = L + slot * i + slot / 2, x = cx - barW / 2;
+    const group = svgEl("g", { tabindex: "0", role: "img",
+      "aria-label": `${fmtDate(g.date)} ${g.home ? "contre" : "a"} ${g.opponent} : PRA ${total} (${g.pts} points, ${g.reb} rebonds, ${g.ast} passes)` });
+
+    let cumulative = 0;
+    const parts = STACK.filter(s => g[s.key] > 0);
+    parts.forEach((s, j) => {
+      const bottom = y(cumulative), top = y(cumulative + g[s.key]);
+      cumulative += g[s.key];
+      let yb = bottom, height = bottom - top;
+      if (j > 0 && height > SEGMENT_GAP + 1) { yb -= SEGMENT_GAP; height -= SEGMENT_GAP; }   // espace sous chaque bloc empile
+      group.append(svgEl("path", { d: segmentPath(x, barW, yb, yb - height, j === parts.length - 1), fill: s.color }));
+      if (height >= MIN_LABEL_HEIGHT) group.append(svgEl("text", { class: "seg", x: cx, y: yb - height / 2 + 4, "text-anchor": "middle" }, String(g[s.key])));
+    });
+    // zone de survol / focus plus large que la barre elle-meme
+    group.append(svgEl("rect", { x: cx - slot / 2 + 4, y: T, width: slot - 8, height: ph, fill: "transparent" }));
+
+    const show = () => {
+      tip.replaceChildren();
+      const head = document.createElement("div"); head.className = "th";
+      head.textContent = `${fmtDate(g.date)} · ${g.home ? "contre" : "a"} ${g.opponent}`;
+      const totalLine = document.createElement("div"); totalLine.innerHTML = `<span class="v">${total}</span> PRA`;
+      tip.append(head, totalLine);
+      for (const s of [...STACK].reverse()) {          // meme ordre que le haut vers le bas de la barre
+        const row = document.createElement("div"); row.className = "tr";
+        const key = document.createElement("span"); key.className = "key"; key.style.borderTopColor = s.color; key.style.borderTopWidth = "3px";
+        const value = document.createElement("span"); value.className = "v"; value.textContent = String(g[s.key]);
+        const name = document.createElement("span"); name.className = "n"; name.textContent = s.label;
+        row.append(key, value, name); tip.append(row);
+      }
+      const minutes = document.createElement("div"); minutes.className = "th"; minutes.textContent = `${fmt(g.mp, 0)} min jouees`;
+      tip.append(minutes);
+      const rect = box.getBoundingClientRect(), scale = rect.width / W;
+      tip.style.left = Math.min(rect.width - 190, Math.max(0, cx * scale - 85)) + "px";
+      tip.style.top = Math.max(0, y(total) * scale - 118) + "px";
+      tip.classList.add("on");
+    };
+    group.addEventListener("pointermove", show); group.addEventListener("focus", show);
+    group.addEventListener("pointerleave", () => tip.classList.remove("on")); group.addEventListener("blur", () => tip.classList.remove("on"));
+    svg.append(group);
+
+    valueLabels.push(svgEl("text", { class: "val halo", x: cx, y: y(total) - 5, "text-anchor": "middle" }, String(total)));
+    // logo du club adverse sous la barre (a defaut de logo : nom court de l'equipe)
+    const logoUrl = LOGOS[g.opponent];
+    if (logoUrl) {
+      const img = svgEl("image", { href: logoUrl, x: cx - LOGO_SIZE / 2, y: H - B + 7, width: LOGO_SIZE, height: LOGO_SIZE });
+      img.append(svgEl("title", {}, `${g.home ? "contre" : "a"} ${g.opponent}`));
+      svg.append(img);
+    } else {
+      svg.append(svgEl("text", { x: cx, y: H - B + 22, "text-anchor": "middle" }, g.opponent.split(" ").pop()));
+    }
+    svg.append(svgEl("text", { x: cx, y: H - 8, "text-anchor": "middle" }, fmtDate(g.date)));
+  });
+  // moyenne de saison : trait plein fin par-dessus les barres, etiquette a droite
+  svg.append(svgEl("line", { x1: L, x2: W - R + 6, y1: y(seasonPra), y2: y(seasonPra), stroke: "var(--text-2)", "stroke-width": 1.5 }));
+  svg.append(svgEl("text", { class: "val", x: W - R + 10, y: y(seasonPra) + 4 }, `Moy. ${fmt(seasonPra)}`));
+  valueLabels.forEach(label => svg.append(label));
+  box.replaceChildren(svg, tip);
+}
+
+function renderLast5(p) {
+  if (!p.last5.length) return `<section class="card"><h2>5 derniers matchs</h2><div class="empty">Aucun match enregistre pour l'instant.</div></section>`;
+  const s = p.season, n = p.last5.length;
+  const cols = [["mp", "Min", 0], ["pts", "Pts", 0], ["reb", "Reb", 0], ["ast", "Pds", 0], ["stl", "Int", 0], ["blk", "Ctr", 0], ["tov", "BP", 0]];
+  const rows = p.last5.map(g => `<tr>
+      <td class="l">${fmtDate(g.date)}</td>
+      <td class="l"><span class="team-cell">${logo(g.opponent)}${esc(g.opponent)}</span></td>
+      <td>${g.home ? "Dom." : "Ext."}</td>
+      ${cols.map(([k, , d]) => `<td>${fmt(g[k], d)}</td>`).join("")}
+      <td><b>${g.pts + g.reb + g.ast}</b></td>
+      <td>${g.fg}/${g.fga}</td><td>${g.fg3}/${g.fg3a}</td><td>${g.ft}/${g.fta}</td>
+      <td>${fmtSigned(g.plusMinus, 0)}</td>
+    </tr>`).join("");
+  const avg = p.last5Avg;
+  const avgPra = avg.pts + avg.reb + avg.ast, seasonPra = s.pts + s.reb + s.ast;
+  const dCell = (d, goodWhenUp = true) => `<td class="${deltaClass(d, goodWhenUp)}">${fmtSigned(d)}</td>`;
+  const sameAsSeason = s.games <= n;
+  return `<section class="card">
+    <h2>${n} derniers matchs</h2>
+    <div class="sub">PRA = points + rebonds + passes : chaque barre empile les trois blocs, avec le total au sommet. Trait : moyenne de saison (PRA).</div>
+    ${sameAsSeason ? `<div class="notice" style="margin:0 0 12px">Ce joueur n'a joue que ${s.games} match(s) cette saison : ses ${n} derniers matchs correspondent a toute la saison, les ecarts sont donc nuls.</div>` : ""}
+    <div class="legend"><span><span class="key bar" style="border-top-color:var(--s1)"></span>Points</span><span><span class="key bar" style="border-top-color:var(--s2)"></span>Rebonds</span><span><span class="key bar" style="border-top-color:var(--s3)"></span>Passes</span><span><span class="key" style="border-top-color:var(--text-2);border-top-width:2px"></span>Moyenne de saison (PRA)</span></div>
+    <div class="chartbox" id="chart-box"></div>
+    <div class="rowscroll"><table class="grid">
+      <thead><tr><th class="l">Date</th><th class="l">Adversaire</th><th></th>
+        ${cols.map(([, label]) => `<th>${label}</th>`).join("")}<th>PRA</th><th>Tirs</th><th>3 pts</th><th>LF</th><th>+/−</th></tr></thead>
+      <tbody>
+        ${rows}
+        <tr class="sum"><td class="l" colspan="3">Moyenne ${n} matchs</td>
+          <td>${fmt(avg.mp)}</td><td>${fmt(avg.pts)}</td><td>${fmt(avg.reb)}</td><td>${fmt(avg.ast)}</td><td>${fmt(avg.stl)}</td><td>${fmt(avg.blk)}</td><td>${fmt(avg.tov)}</td>
+          <td>${fmt(avgPra)}</td><td colspan="4"></td></tr>
+        <tr class="delta"><td class="l" colspan="3">Ecart avec la saison</td>
+          ${dCell(avg.mp - s.mp)}${dCell(avg.pts - s.pts)}${dCell(avg.reb - s.reb)}${dCell(avg.ast - s.ast)}${dCell(avg.stl - s.stl)}${dCell(avg.blk - s.blk)}${dCell(avg.tov - s.tov, false)}
+          ${dCell(avgPra - seasonPra)}<td colspan="4"></td></tr>
+      </tbody>
+    </table></div>
+  </section>`;
+}
+
+function showPlayer(name) {
+  const p = DATA.players[name];
+  const abbr = p.teamAbbr ? ` · ${esc(p.teamAbbr)}` : "";
+  $("result").innerHTML = `<section class="card">
+      <div class="player-head">${avatar(name, p.team, 76)}
+        <div><div class="name">${esc(name)}</div><div class="info">${esc(p.team || "Equipe inconnue")}${abbr}${p.pos ? " · " + esc(p.pos) : ""}</div></div></div>
+    </section>
+    ${renderSeason(p)}${renderShares(p)}${renderLast5(p)}`;
+  const box = $("chart-box");
+  if (box && p.last5.length) renderChartInto(box, p);
+}
+
+/* ----------------------------------------------------------------- recherche */
+function resolve(raw) {
+  const text = raw.trim();
+  if (!text) return null;
+  if (DATA.players[text]) return text;
+  const m = text.match(/^(.*)\s\(([A-Z0-9]+)\)$/);
+  const bare = m ? m[1] : text;
+  if (DATA.players[bare]) return bare;
+  return BY_NORM[norm(bare)] || null;      // tolere accents / majuscules / suffixes (Jr., III...)
+}
+
+function submit(silent) {
+  const raw = $("player-input").value;
+  const name = resolve(raw);
+  if (!name) {
+    $("error").textContent = silent || !raw.trim() ? "" : `Joueur introuvable : « ${raw.trim()} ». Choisissez un nom dans la liste.`;
+    if (!silent && raw.trim()) $("result").replaceChildren();   // pas de joueur precedent a cote d'une erreur
+    return;
+  }
+  $("error").textContent = "";
+  saveSelection(name);
+  showPlayer(name);
+}
+
+/* Le joueur choisi est garde dans le navigateur et partage avec l'onglet « Estimateur NBA »
+   (meme cle dans les deux pages) : on retrouve le meme joueur en passant de l'un a l'autre.
+   Si le stockage est indisponible (navigation privee...), la page marche simplement sans memoire. */
+const STORAGE_KEY = "nba.selection.player";
+function saveSelection(name) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ player: name })); } catch (err) { /* sans memoire */ }
+}
+function restoreSelection() {
+  let saved = null;
+  try { saved = (JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}).player; } catch (err) { /* sans memoire */ }
+  if (saved && DATA.players[saved]) {
+    const abbr = DATA.players[saved].teamAbbr;
+    $("player-input").value = abbr ? `${saved} (${abbr})` : saved;
+    submit(true);
+  }
+}
+
+async function init() {
+  try {
+    const [dataRes, logosRes] = await Promise.all([
+      fetch("data/player_stats.json", { cache: "no-store" }),
+      fetch("logos/teams.json", { cache: "no-store" }),
+    ]);
+    if (!dataRes.ok) throw new Error("data/player_stats.json introuvable : lancez start.bat (ou build_player_stats.py).");
+    DATA = await dataRes.json();
+    LOGOS = logosRes.ok ? await logosRes.json() : {};
+    await loadPhotos();
+  } catch (err) {
+    $("meta").textContent = "";
+    $("error").textContent = err.message;
+    return;
+  }
+  const names = Object.keys(DATA.players).sort((a, b) => a.localeCompare(b));
+  const list = $("player-list");
+  for (const name of names) {
+    BY_NORM[norm(name)] = name;
+    const opt = document.createElement("option");
+    opt.value = DATA.players[name].teamAbbr ? `${name} (${DATA.players[name].teamAbbr})` : name;
+    list.append(opt);
+  }
+  $("meta").textContent = `Saison ${DATA.season} — ${names.length} joueurs — donnees du ${new Date(DATA.generatedAt).toLocaleString("fr-FR")}`;
+  $("go-btn").addEventListener("click", () => submit(false));
+  $("player-input").addEventListener("keydown", e => { if (e.key === "Enter") submit(false); });
+  // choix dans la liste deroulante : affichage immediat (la saisie partielle n'affiche pas d'erreur)
+  $("player-input").addEventListener("input", () => {
+    const raw = $("player-input").value;
+    if (DATA.players[raw] || /\([A-Z0-9]+\)$/.test(raw)) submit(true); else $("error").textContent = "";
+  });
+  restoreSelection();
+}
+
+init();
+</script>
+<script src="site.js"></script>
+</body>
+</html>

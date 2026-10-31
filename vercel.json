@@ -1,0 +1,7 @@
+{
+  "outputDirectory": "wnba-odds",
+  "buildCommand": "rm -f wnba-odds/*.py wnba-odds/*.bat",
+  "headers": [
+    { "source": "/data/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+  ]
+}
