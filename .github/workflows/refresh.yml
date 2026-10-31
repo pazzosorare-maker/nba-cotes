@@ -1,0 +1,93 @@
+name: Actualisation des donnees
+run-name: Actualisation ${{ inputs.mode || (github.event.schedule == '17 3,9,15,21 * * *' && 'full' || 'fast') }}
+
+# Equivalent en ligne de start.bat. Deux modes :
+#   fast : cotes Winamax + estimations + suivi des modeles et des paris (rapide, sans appel a basketball-reference)
+#   full : fast + logos, photos et statistiques des joueurs (basketball-reference, 3 s entre deux requetes)
+# Planning (heure UTC) : fast toutes les heures, full 4 fois par jour. Le bouton « Actualiser » du site
+# declenche ce workflow via api/refresh.js.
+on:
+  schedule:
+    - cron: '7 * * * *'
+    - cron: '17 3,9,15,21 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "fast = cotes + estimations + suivi ; full = + statistiques des joueurs"
+        type: choice
+        options: [fast, full]
+        default: fast
+
+# Une seule actualisation a la fois : data/history.json et data/bets.json sont irremplacables.
+concurrency:
+  group: actualisation
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      MODE: ${{ inputs.mode || (github.event.schedule == '17 3,9,15,21 * * *' && 'full' || 'fast') }}
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: nba-player-stats/requirements.txt
+
+      # requirements.txt n'est PAS a la racine : Vercel y verrait un projet Python et echouerait.
+      - run: pip install -r nba-player-stats/requirements.txt
+
+      - name: Logos et photos
+        if: env.MODE == 'full'
+        working-directory: wnba-odds
+        continue-on-error: true
+        run: |
+          python download_logos.py
+          python download_player_photos.py
+
+      - name: Cotes Winamax
+        working-directory: wnba-odds
+        continue-on-error: true
+        run: python nba_scraper.py
+
+      - name: Statistiques des joueurs (basketball-reference)
+        if: env.MODE == 'full'
+        working-directory: wnba-odds
+        continue-on-error: true
+        run: |
+          python ../nba-player-stats/download_nba_stats.py
+          python ../nba-player-stats/download_game_logs.py
+
+      - name: Estimations et donnees des pages
+        working-directory: wnba-odds
+        run: |
+          python ../nba-player-stats/build_estimates.py
+          python ../nba-player-stats/build_player_stats.py
+          python ../nba-player-stats/build_position_matchups.py
+
+      - name: Suivi des modeles et des paris
+        working-directory: wnba-odds
+        run: |
+          python ../nba-player-stats/track_history.py
+          python ../nba-player-stats/track_bets.py
+
+      - name: Publier les nouvelles donnees
+        run: |
+          git config user.name "actualisation-auto"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A wnba-odds/data wnba-odds/photos wnba-odds/logos nba-player-stats
+          if git diff --cached --quiet; then
+            echo "Rien de nouveau"
+            exit 0
+          fi
+          git commit -m "Actualisation des donnees ($MODE)"
+          git pull --rebase
+          git push
