@@ -21,6 +21,65 @@ const minutes = (name, fallback) => {
   return Number.isFinite(value) && value >= 0 ? value : fallback;
 };
 
+class GithubError extends Error {
+  constructor(status, path) {
+    super(`GitHub ${status} sur ${path}`);
+    this.status = status;
+  }
+}
+
+// Message sans secret, assez precis pour corriger la configuration.
+function hintFor(status) {
+  if (status === 401) return "GitHub refuse le jeton (invalide, expire ou mal copie) : verifiez GITHUB_TOKEN dans Vercel.";
+  if (status === 403) return "Le jeton n'a pas le droit « Actions : Read and write » sur ce depot, ou GitHub limite les appels.";
+  if (status === 404) return "Depot ou workflow introuvable : verifiez GITHUB_REPO (pseudo/depot) et la presence de .github/workflows/refresh.yml sur la branche principale.";
+  return "Impossible de joindre GitHub pour le moment.";
+}
+
+async function statusOf(path) {
+  try {
+    const response = await fetch(`${API}${path}`, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "nba-cotes-refresh",
+      },
+    });
+    return response.status;
+  } catch (err) {
+    return 0;
+  }
+}
+
+// GET /api/refresh?check=1 : controle pas a pas de la configuration (aucun secret n'est renvoye).
+async function checkConfiguration(repo) {
+  const token = process.env.GITHUB_TOKEN || "";
+  const report = {
+    repo,
+    repoFormatOk: /^[\w.-]+\/[\w.-]+$/.test(repo),
+    tokenLooksValid: /^(github_pat_|ghp_)[\w]+$/.test(token),
+    branch: process.env.GITHUB_BRANCH || "main",
+  };
+  if (!report.repoFormatOk) {
+    return { ...report, diagnosis: "GITHUB_REPO doit avoir la forme pseudo/depot, sans https://, sans .git, sans espace." };
+  }
+  if (!report.tokenLooksValid) {
+    return { ...report, diagnosis: "GITHUB_TOKEN a un format inattendu : il doit commencer par github_pat_ et ne contenir ni espace ni retour a la ligne." };
+  }
+  report.repoStatus = await statusOf(`/repos/${repo}`);
+  report.workflowStatus = await statusOf(`/repos/${repo}/actions/workflows/${WORKFLOW_FILE}`);
+  report.runsStatus = await statusOf(`/repos/${repo}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=1`);
+  const { repoStatus: r, workflowStatus: w, runsStatus: s } = report;
+  if (r === 401 || w === 401 || s === 401) report.diagnosis = hintFor(401);
+  else if (r === 404) report.diagnosis = "Depot introuvable avec ce jeton : GITHUB_REPO est faux (pseudo/depot, majuscules comprises), ou le jeton n'a pas acces a ce depot (« Only select repositories » : choisissez-le).";
+  else if (w === 404) report.diagnosis = "Le depot est bon mais .github/workflows/refresh.yml est absent de la branche principale : creez ce fichier sur GitHub.";
+  else if (s === 403 || w === 403 || r === 403) report.diagnosis = hintFor(403);
+  else if (r === 200 && w === 200 && s === 200) report.diagnosis = "Configuration correcte : depot, workflow et jeton sont bons. Si le bouton echoue encore, verifiez que le jeton a bien « Actions : Read and write » (le declenchement l'exige) et que la branche (GITHUB_BRANCH, main par defaut) existe.";
+  else report.diagnosis = "Reponses inattendues de GitHub : voir les codes ci-dessus.";
+  return report;
+}
+
 async function github(path, init = {}) {
   const response = await fetch(`${API}${path}`, {
     ...init,
@@ -34,7 +93,8 @@ async function github(path, init = {}) {
   });
   if (!response.ok && response.status !== 204) {
     const detail = await response.text().catch(() => "");
-    throw new Error(`GitHub ${response.status} sur ${path} : ${detail.slice(0, 200)}`);
+    console.error(`GitHub ${response.status} sur ${path} : ${detail.slice(0, 200)}`);
+    throw new GithubError(response.status, path);
   }
   return response.status === 204 ? null : response.json();
 }
@@ -71,6 +131,10 @@ module.exports = async (req, res) => {
   const repo = process.env.GITHUB_REPO;
   if (!repo || !process.env.GITHUB_TOKEN) {
     return res.status(503).json({ error: "not_configured", message: "Actualisation non configuree sur ce site (GITHUB_REPO / GITHUB_TOKEN)." });
+  }
+
+  if (req.method === "GET" && new URL(req.url || "/", "http://x").searchParams.has("check")) {
+    return res.status(200).json(await checkConfiguration(repo));
   }
 
   try {
@@ -112,6 +176,6 @@ module.exports = async (req, res) => {
     return res.status(202).json({ state: "started", mode, requestedAt: new Date(now).toISOString() });
   } catch (err) {
     console.error(err);
-    return res.status(502).json({ error: "github_error", message: "Impossible de joindre GitHub pour le moment." });
+    return res.status(502).json({ error: "github_error", githubStatus: err.status || 0, message: hintFor(err.status) });
   }
 };
