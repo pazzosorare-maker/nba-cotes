@@ -1,889 +1,301 @@
 {
-  "scrapedAt": "2026-11-20T11:50:40.727328+00:00",
+  "scrapedAt": "2026-11-24T23:56:12.768482+00:00",
   "source": "https://www.winamax.fr/paris-sportifs/sports/2/15/177",
   "matches": [
     {
-      "matchId": 73697002,
+      "matchId": 73697014,
       "status": "PREMATCH",
-      "matchStart": 1795220100,
-      "team1": "Atlanta Hawks",
-      "team2": "Charlotte Hornets",
-      "odd1": 1.35,
-      "odd2": 2.4,
+      "matchStart": 1795565700,
+      "team1": "Orlando Magic",
+      "team2": "Detroit Pistons",
+      "odd1": 1.62,
+      "odd2": 2.1,
       "playerTotalPRA": [
-        {
-          "player": "Jalen Johnson",
-          "team": 1,
-          "line": 37.5,
-          "overOdd": 1.76,
-          "underOdd": 1.7
-        },
-        {
-          "player": "Nickeil Alexander-Walker",
-          "team": 1,
-          "line": 28.5,
-          "overOdd": 1.76,
-          "underOdd": 1.7
-        },
-        {
-          "player": "Onyeka Okongwu",
-          "team": 1,
-          "line": 24.5,
-          "overOdd": 1.54,
-          "underOdd": 1.94
-        },
-        {
-          "player": "Dyson Daniels",
-          "team": 1,
-          "line": 23.5,
-          "overOdd": 1.66,
-          "underOdd": 1.8
-        },
-        {
-          "player": "Aaron Wiggins",
-          "team": 1,
-          "line": 18.5,
-          "overOdd": 1.5,
-          "underOdd": 2
-        },
-        {
-          "player": "Kingston Flemings",
-          "team": 1,
-          "line": 14.5,
-          "overOdd": 1.66,
-          "underOdd": 1.8
-        },
-        {
-          "player": "Naz Reid",
-          "team": 2,
-          "line": 28.5,
-          "overOdd": 1.52,
-          "underOdd": 1.98
-        },
-        {
-          "player": "Brandon Miller",
-          "team": 2,
-          "line": 28.5,
-          "overOdd": 1.72,
-          "underOdd": 1.74
-        },
-        {
-          "player": "Coby White",
-          "team": 2,
-          "line": 23.5,
-          "overOdd": 1.58,
-          "underOdd": 1.86
-        },
-        {
-          "player": "Moussa Diabate",
-          "team": 2,
-          "line": 21.5,
-          "overOdd": 1.6,
-          "underOdd": 1.86
-        },
-        {
-          "player": "Sion James",
-          "team": 2,
-          "line": 14.5,
-          "overOdd": 1.56,
-          "underOdd": 1.92
-        },
-        {
-          "player": "Royce O'Neale",
-          "team": 2,
-          "line": 12.5,
-          "overOdd": 1.72,
-          "underOdd": 1.72
-        }
-      ]
-    },
-    {
-      "matchId": 73697020,
-      "status": "PREMATCH",
-      "matchStart": 1795221600,
-      "team1": "Brooklyn Nets",
-      "team2": "Orlando Magic",
-      "odd1": 2.4,
-      "odd2": 1.35,
-      "playerTotalPRA": [
-        {
-          "player": "Julius Randle",
-          "team": 1,
-          "line": 30.5,
-          "overOdd": 1.76,
-          "underOdd": 1.68
-        },
-        {
-          "player": "Michael Porter Jr.",
-          "team": 1,
-          "line": 29.5,
-          "overOdd": 1.7,
-          "underOdd": 1.74
-        },
-        {
-          "player": "Day Ron Sharpe",
-          "team": 1,
-          "line": 19.5,
-          "overOdd": 1.56,
-          "underOdd": 1.9
-        },
-        {
-          "player": "Nolan Traore",
-          "team": 1,
-          "line": 16.5,
-          "overOdd": 1.78,
-          "underOdd": 1.66
-        },
-        {
-          "player": "Egor Demin",
-          "team": 1,
-          "line": 16.5,
-          "overOdd": 1.6,
-          "underOdd": 1.86
-        },
-        {
-          "player": "Mikel Brown Jr.",
-          "team": 1,
-          "line": 15.5,
-          "overOdd": 1.56,
-          "underOdd": 1.92
-        },
-        {
-          "player": "Danny Wolf",
-          "team": 1,
-          "line": 10.5,
-          "overOdd": 1.62,
-          "underOdd": 1.82
-        },
         {
           "player": "Franz Wagner",
-          "team": 2,
-          "line": 38.5,
-          "overOdd": 1.8,
-          "underOdd": 1.66
+          "team": 1,
+          "line": 36.5,
+          "overOdd": 1.74,
+          "underOdd": 1.7
         },
         {
           "player": "Desmond Bane",
-          "team": 2,
-          "line": 26.5,
-          "overOdd": 1.56,
-          "underOdd": 1.9
+          "team": 1,
+          "line": 24.5,
+          "overOdd": 1.66,
+          "underOdd": 1.8
         },
         {
           "player": "Anthony Black",
-          "team": 2,
-          "line": 24.5,
-          "overOdd": 1.56,
-          "underOdd": 1.9
-        },
-        {
-          "player": "Jalen Suggs",
-          "team": 2,
-          "line": 21.5,
-          "overOdd": 1.76,
-          "underOdd": 1.7
+          "team": 1,
+          "line": 23.5,
+          "overOdd": 1.62,
+          "underOdd": 1.84
         },
         {
           "player": "Wendell Carter Jr.",
-          "team": 2,
-          "line": 21.5,
-          "overOdd": 1.64,
-          "underOdd": 1.82
+          "team": 1,
+          "line": 20.5,
+          "overOdd": 1.74,
+          "underOdd": 1.72
+        },
+        {
+          "player": "Jalen Suggs",
+          "team": 1,
+          "line": 18.5,
+          "overOdd": 1.58,
+          "underOdd": 1.86
         },
         {
           "player": "Tristan da Silva",
-          "team": 2,
-          "line": 16.5,
-          "overOdd": 1.56,
-          "underOdd": 1.92
-        },
-        {
-          "player": "Goga Bitadze",
-          "team": 2,
-          "line": 13.5,
-          "overOdd": 1.7,
-          "underOdd": 1.74
-        }
-      ]
-    },
-    {
-      "matchId": 73697024,
-      "status": "PREMATCH",
-      "matchStart": 1795221600,
-      "team1": "Detroit Pistons",
-      "team2": "Toronto Raptors",
-      "odd1": 1.26,
-      "odd2": 2.75,
-      "playerTotalPRA": [
-        {
-          "player": "Cade Cunningham",
           "team": 1,
-          "line": 39.5,
-          "overOdd": 1.74,
-          "underOdd": 1.72
+          "line": 15.5,
+          "overOdd": 1.66,
+          "underOdd": 1.8
         },
         {
           "player": "Daniss Jenkins",
-          "team": 1,
-          "line": 24.5,
-          "overOdd": 1.62,
-          "underOdd": 1.82
+          "team": 2,
+          "line": 27.5,
+          "overOdd": 1.66,
+          "underOdd": 1.8
         },
         {
           "player": "Ausar Thompson",
-          "team": 1,
-          "line": 22.5,
-          "overOdd": 1.47,
-          "underOdd": 2
-        },
-        {
-          "player": "Paul Reed",
-          "team": 1,
-          "line": 20.5,
-          "overOdd": 1.72,
-          "underOdd": 1.74
-        },
-        {
-          "player": "Kevin Huerter",
-          "team": 1,
-          "line": 18.5,
-          "overOdd": 1.56,
-          "underOdd": 1.92
-        },
-        {
-          "player": "Scottie Barnes",
           "team": 2,
-          "line": 35.5,
-          "overOdd": 1.52,
-          "underOdd": 1.96
-        },
-        {
-          "player": "Immanuel Quickley",
-          "team": 2,
-          "line": 28.5,
-          "overOdd": 1.64,
-          "underOdd": 1.82
-        },
-        {
-          "player": "Jakob Poeltl",
-          "team": 2,
-          "line": 21.5,
-          "overOdd": 1.62,
-          "underOdd": 1.84
-        },
-        {
-          "player": "Ja'Kobe Walter",
-          "team": 2,
-          "line": 18.5,
+          "line": 24.5,
           "overOdd": 1.58,
-          "underOdd": 1.86
-        },
-        {
-          "player": "Jamison Battle",
-          "team": 2,
-          "line": 15.5,
-          "overOdd": 1.74,
-          "underOdd": 1.72
-        },
-        {
-          "player": "Jamal Shead",
-          "team": 2,
-          "line": 13.5,
-          "overOdd": 1.52,
-          "underOdd": 1.96
+          "underOdd": 1.9
         }
       ]
     },
     {
-      "matchId": 73697022,
+      "matchId": 73697016,
       "status": "PREMATCH",
-      "matchStart": 1795221900,
-      "team1": "Cleveland Cavaliers",
-      "team2": "Indiana Pacers",
-      "odd1": 1.28,
-      "odd2": 2.7,
+      "matchStart": 1795569300,
+      "team1": "Washington Wizards",
+      "team2": "Boston Celtics",
+      "odd1": 4,
+      "odd2": 1.18,
       "playerTotalPRA": [
-        {
-          "player": "Donovan Mitchell",
-          "team": 1,
-          "line": 35.5,
-          "overOdd": 1.64,
-          "underOdd": 1.82
-        },
-        {
-          "player": "James Harden",
-          "team": 1,
-          "line": 29.5,
-          "overOdd": 1.62,
-          "underOdd": 1.82
-        },
-        {
-          "player": "Jarrett Allen",
-          "team": 1,
-          "line": 25.5,
-          "overOdd": 1.5,
-          "underOdd": 2
-        },
-        {
-          "player": "Tyrese Proctor",
-          "team": 1,
-          "line": 18.5,
-          "overOdd": 1.72,
-          "underOdd": 1.74
-        },
-        {
-          "player": "Peyton Watson",
-          "team": 1,
-          "line": 18.5,
-          "overOdd": 1.56,
-          "underOdd": 1.9
-        },
-        {
-          "player": "Pascal Siakam",
-          "team": 2,
-          "line": 33.5,
-          "overOdd": 1.72,
-          "underOdd": 1.74
-        },
-        {
-          "player": "Andrew Nembhard",
-          "team": 2,
-          "line": 24.5,
-          "overOdd": 1.7,
-          "underOdd": 1.76
-        },
-        {
-          "player": "Ivica Zubac",
-          "team": 2,
-          "line": 22.5,
-          "overOdd": 1.7,
-          "underOdd": 1.76
-        },
-        {
-          "player": "Aaron Nesmith",
-          "team": 2,
-          "line": 19.5,
-          "overOdd": 1.56,
-          "underOdd": 1.9
-        },
-        {
-          "player": "Kelly Oubre Jr.",
-          "team": 2,
-          "line": 17.5,
-          "overOdd": 1.64,
-          "underOdd": 1.82
-        }
-      ]
-    },
-    {
-      "matchId": 73697004,
-      "status": "PREMATCH",
-      "matchStart": 1795223400,
-      "team1": "Chicago Bulls",
-      "team2": "Washington Wizards",
-      "odd1": 1.54,
-      "odd2": 1.96,
-      "playerTotalPRA": [
-        {
-          "player": "Josh Giddey",
-          "team": 1,
-          "line": 28.5,
-          "overOdd": 1.58,
-          "underOdd": 1.9
-        },
-        {
-          "player": "Norman Powell",
-          "team": 1,
-          "line": 28.5,
-          "overOdd": 1.56,
-          "underOdd": 1.92
-        },
-        {
-          "player": "Jalen Smith",
-          "team": 1,
-          "line": 26.5,
-          "overOdd": 1.7,
-          "underOdd": 1.76
-        },
-        {
-          "player": "Matas Buzelis",
-          "team": 1,
-          "line": 24.5,
-          "overOdd": 1.7,
-          "underOdd": 1.76
-        },
-        {
-          "player": "Tre Jones",
-          "team": 1,
-          "line": 17.5,
-          "overOdd": 1.6,
-          "underOdd": 1.86
-        },
-        {
-          "player": "Nicolas Claxton",
-          "team": 1,
-          "line": 17.5,
-          "overOdd": 1.7,
-          "underOdd": 1.74
-        },
-        {
-          "player": "Isaac Okoro",
-          "team": 1,
-          "line": 15.5,
-          "overOdd": 1.7,
-          "underOdd": 1.76
-        },
-        {
-          "player": "Buddy Hield",
-          "team": 1,
-          "line": 12.5,
-          "overOdd": 1.54,
-          "underOdd": 1.92
-        },
         {
           "player": "Anthony Davis",
-          "team": 2,
-          "line": 37.5,
-          "overOdd": 1.74,
-          "underOdd": 1.7
+          "team": 1,
+          "line": 33.5,
+          "overOdd": 1.64,
+          "underOdd": 1.82
         },
         {
           "player": "Trae Young",
-          "team": 2,
-          "line": 31.5,
-          "overOdd": 1.76,
-          "underOdd": 1.7
+          "team": 1,
+          "line": 25.5,
+          "overOdd": 1.8,
+          "underOdd": 1.64
         },
         {
           "player": "AJ Dybantsa",
-          "team": 2,
-          "line": 27.5,
-          "overOdd": 1.62,
-          "underOdd": 1.82
+          "team": 1,
+          "line": 24.5,
+          "overOdd": 1.72,
+          "underOdd": 1.74
         },
         {
           "player": "Kyshawn George",
-          "team": 2,
-          "line": 25.5,
-          "overOdd": 1.74,
-          "underOdd": 1.72
-        },
-        {
-          "player": "Alexandre Sarr",
-          "team": 2,
-          "line": 19.5,
-          "overOdd": 1.52,
-          "underOdd": 1.98
-        },
-        {
-          "player": "Bilal Coulibaly",
-          "team": 2,
-          "line": 12.5,
-          "overOdd": 1.66,
-          "underOdd": 1.8
-        }
-      ]
-    },
-    {
-      "matchId": 73697006,
-      "status": "PREMATCH",
-      "matchStart": 1795223400,
-      "team1": "Oklahoma City Thunder",
-      "team2": "New Orleans Pelicans",
-      "odd1": 1.12,
-      "odd2": 3.8,
-      "playerTotalPRA": [
-        {
-          "player": "Shai Gilgeous-Alexander",
           "team": 1,
-          "line": 41.5,
-          "overOdd": 1.66,
-          "underOdd": 1.8
-        },
-        {
-          "player": "Ajay Mitchell",
-          "team": 1,
-          "line": 24.5,
-          "overOdd": 1.56,
-          "underOdd": 1.92
-        },
-        {
-          "player": "Isaiah Hartenstein",
-          "team": 1,
-          "line": 23.5,
-          "overOdd": 1.5,
-          "underOdd": 2
-        },
-        {
-          "player": "Jared McCain",
-          "team": 1,
-          "line": 21.5,
-          "overOdd": 1.68,
-          "underOdd": 1.78
-        },
-        {
-          "player": "Aday Mara",
-          "team": 1,
-          "line": 19.5,
-          "overOdd": 1.6,
-          "underOdd": 1.86
-        },
-        {
-          "player": "Kenrich Williams",
-          "team": 1,
-          "line": 14.5,
-          "overOdd": 1.68,
-          "underOdd": 1.76
-        },
-        {
-          "player": "Jaylin Williams",
-          "team": 1,
-          "line": 11.5,
+          "line": 22.5,
           "overOdd": 1.64,
           "underOdd": 1.82
         },
         {
-          "player": "Zion Williamson",
+          "player": "Alexandre Sarr",
+          "team": 1,
+          "line": 17.5,
+          "overOdd": 1.58,
+          "underOdd": 1.9
+        },
+        {
+          "player": "Bilal Coulibaly",
+          "team": 1,
+          "line": 10.5,
+          "overOdd": 1.62,
+          "underOdd": 1.84
+        },
+        {
+          "player": "Jayson Tatum",
+          "team": 2,
+          "line": 40.5,
+          "overOdd": 1.66,
+          "underOdd": 1.8
+        },
+        {
+          "player": "Paul George",
           "team": 2,
           "line": 28.5,
           "overOdd": 1.72,
           "underOdd": 1.74
         },
         {
-          "player": "Jeremiah Fears",
+          "player": "Neemias Queta",
           "team": 2,
-          "line": 27.5,
-          "overOdd": 1.64,
-          "underOdd": 1.82
-        },
-        {
-          "player": "Saddiq Bey",
-          "team": 2,
-          "line": 23.5,
-          "overOdd": 1.74,
-          "underOdd": 1.7
-        },
-        {
-          "player": "Yves Missi",
-          "team": 2,
-          "line": 14.5,
-          "overOdd": 1.6,
-          "underOdd": 1.86
-        },
-        {
-          "player": "Herbert Jones",
-          "team": 2,
-          "line": 12.5,
-          "overOdd": 1.62,
-          "underOdd": 1.84
-        }
-      ]
-    },
-    {
-      "matchId": 73697008,
-      "status": "PREMATCH",
-      "matchStart": 1795228800,
-      "team1": "Utah Jazz",
-      "team2": "Phoenix Suns",
-      "odd1": 2.15,
-      "odd2": 1.44,
-      "playerTotalPRA": [
-        {
-          "player": "Keyonte George",
-          "team": 1,
-          "line": 35.5,
-          "overOdd": 1.74,
-          "underOdd": 1.72
-        },
-        {
-          "player": "Darryn Peterson",
-          "team": 1,
-          "line": 27.5,
-          "overOdd": 1.78,
-          "underOdd": 1.66
-        },
-        {
-          "player": "Ace Bailey",
-          "team": 1,
           "line": 21.5,
-          "overOdd": 1.66,
-          "underOdd": 1.8
-        },
-        {
-          "player": "Mo Bamba",
-          "team": 1,
-          "line": 20.5,
-          "overOdd": 1.76,
-          "underOdd": 1.68
-        },
-        {
-          "player": "Jaxson Hayes",
-          "team": 1,
-          "line": 15.5,
-          "overOdd": 1.6,
+          "overOdd": 1.58,
           "underOdd": 1.86
         },
         {
-          "player": "Brice Sensabaugh",
-          "team": 1,
-          "line": 15.5,
+          "player": "Derrick White",
+          "team": 2,
+          "line": 20.5,
+          "overOdd": 1.54,
+          "underOdd": 1.92
+        },
+        {
+          "player": "Payton Pritchard",
+          "team": 2,
+          "line": 18.5,
           "overOdd": 1.52,
           "underOdd": 1.98
         },
         {
-          "player": "Sviatoslav Mykhailiuk",
-          "team": 1,
-          "line": 11.5,
-          "overOdd": 1.64,
-          "underOdd": 1.82
-        },
-        {
-          "player": "Devin Booker",
+          "player": "Sam Hauser",
           "team": 2,
-          "line": 35.5,
-          "overOdd": 1.62,
-          "underOdd": 1.82
-        },
-        {
-          "player": "Miles Bridges",
-          "team": 2,
-          "line": 23.5,
-          "overOdd": 1.74,
-          "underOdd": 1.7
-        },
-        {
-          "player": "Jalen Green",
-          "team": 2,
-          "line": 21.5,
-          "overOdd": 1.62,
-          "underOdd": 1.84
-        },
-        {
-          "player": "Dillon Brooks",
-          "team": 2,
-          "line": 19.5,
-          "overOdd": 1.54,
-          "underOdd": 1.96
-        },
-        {
-          "player": "Collin Gillespie",
-          "team": 2,
-          "line": 16.5,
-          "overOdd": 1.66,
-          "underOdd": 1.78
-        },
-        {
-          "player": "Oso Ighodaro",
-          "team": 2,
-          "line": 14.5,
-          "overOdd": 1.5,
+          "line": 9.5,
+          "overOdd": 1.49,
           "underOdd": 2
         },
         {
-          "player": "Khaman Maluach",
+          "player": "Hugo Gonzalez",
           "team": 2,
-          "line": 12.5,
-          "overOdd": 1.54,
-          "underOdd": 1.94
-        }
-      ]
-    },
-    {
-      "matchId": 73697010,
-      "status": "PREMATCH",
-      "matchStart": 1795230600,
-      "team1": "Los Angeles Lakers",
-      "team2": "Sacramento Kings",
-      "odd1": 1.06,
-      "odd2": 4.6,
-      "playerTotalPRA": [
-        {
-          "player": "Luka Doncic",
-          "team": 1,
-          "line": 51.5,
-          "overOdd": 1.78,
-          "underOdd": 1.68
-        },
-        {
-          "player": "Walker Kessler",
-          "team": 1,
-          "line": 25.5,
-          "overOdd": 1.68,
+          "line": 8.5,
+          "overOdd": 1.7,
           "underOdd": 1.76
-        },
-        {
-          "player": "Quentin Grimes",
-          "team": 1,
-          "line": 23.5,
-          "overOdd": 1.6,
-          "underOdd": 1.86
-        },
-        {
-          "player": "Collin Sexton",
-          "team": 1,
-          "line": 17.5,
-          "overOdd": 1.6,
-          "underOdd": 1.86
-        },
-        {
-          "player": "Sandro Mamukelashvili",
-          "team": 1,
-          "line": 15.5,
-          "overOdd": 1.6,
-          "underOdd": 1.86
-        },
-        {
-          "player": "Jake Laravia",
-          "team": 1,
-          "line": 12.5,
-          "overOdd": 1.56,
-          "underOdd": 1.92
-        },
-        {
-          "player": "Matisse Thybulle",
-          "team": 1,
-          "line": 10.5,
-          "overOdd": 1.54,
-          "underOdd": 1.94
-        },
-        {
-          "player": "Ziaire Williams",
-          "team": 1,
-          "line": 10.5,
-          "overOdd": 1.56,
-          "underOdd": 1.9
-        },
-        {
-          "player": "Darius Acuff",
-          "team": 2,
-          "line": 34.5,
-          "overOdd": 1.82,
-          "underOdd": 1.62
-        },
-        {
-          "player": "Domantas Sabonis",
-          "team": 2,
-          "line": 29.5,
-          "overOdd": 1.62,
-          "underOdd": 1.84
-        },
-        {
-          "player": "Zach LaVine",
-          "team": 2,
-          "line": 24.5,
-          "overOdd": 1.74,
-          "underOdd": 1.7
-        },
-        {
-          "player": "De'Andre Hunter",
-          "team": 2,
-          "line": 18.5,
-          "overOdd": 1.6,
-          "underOdd": 1.86
-        },
-        {
-          "player": "Keegan Murray",
-          "team": 2,
-          "line": 17.5,
-          "overOdd": 1.6,
-          "underOdd": 1.86
         }
       ]
     },
     {
-      "matchId": 73697012,
+      "matchId": 73697018,
       "status": "PREMATCH",
-      "matchStart": 1795230600,
+      "matchStart": 1795576500,
       "team1": "Denver Nuggets",
-      "team2": "Houston Rockets",
-      "odd1": 1.64,
-      "odd2": 1.82,
+      "team2": "Dallas Mavericks",
+      "odd1": 1.28,
+      "odd2": 3.2,
       "playerTotalPRA": [
         {
           "player": "Nikola Jokic",
           "team": 1,
-          "line": 46.5,
-          "overOdd": 1.66,
-          "underOdd": 1.78
+          "line": 47.5,
+          "overOdd": 1.58,
+          "underOdd": 1.9
         },
         {
           "player": "Jamal Murray",
           "team": 1,
-          "line": 31.5,
-          "overOdd": 1.62,
-          "underOdd": 1.84
+          "line": 34.5,
+          "overOdd": 1.84,
+          "underOdd": 1.62
         },
         {
           "player": "Aaron Gordon",
           "team": 1,
-          "line": 18.5,
-          "overOdd": 1.62,
-          "underOdd": 1.84
+          "line": 21.5,
+          "overOdd": 1.78,
+          "underOdd": 1.68
         },
         {
           "player": "Christian Braun",
           "team": 1,
-          "line": 16.5,
-          "overOdd": 1.6,
-          "underOdd": 1.86
+          "line": 19.5,
+          "overOdd": 1.64,
+          "underOdd": 1.8
         },
         {
           "player": "Cameron Johnson",
           "team": 1,
-          "line": 15.5,
-          "overOdd": 1.62,
-          "underOdd": 1.84
+          "line": 17.5,
+          "overOdd": 1.6,
+          "underOdd": 1.86
         },
         {
           "player": "DeMar DeRozan",
           "team": 1,
           "line": 14.5,
-          "overOdd": 1.62,
-          "underOdd": 1.82
+          "overOdd": 1.68,
+          "underOdd": 1.78
         },
         {
-          "player": "Trevon Brazile",
-          "team": 1,
-          "line": 7.5,
-          "overOdd": 1.62,
-          "underOdd": 1.84
-        },
-        {
-          "player": "Alperen Sengun",
+          "player": "Cooper Flagg",
           "team": 2,
-          "line": 35.5,
-          "overOdd": 1.62,
-          "underOdd": 1.82
+          "line": 36.5,
+          "overOdd": 1.64,
+          "underOdd": 1.56
         },
         {
-          "player": "Kevin Durant",
+          "player": "Kyrie Irving",
           "team": 2,
           "line": 30.5,
-          "overOdd": 1.66,
-          "underOdd": 1.8
+          "overOdd": 1.68,
+          "underOdd": 1.76
         },
         {
-          "player": "Amen Thompson",
+          "player": "PJ Washington",
           "team": 2,
-          "line": 25.5,
+          "line": 18.5,
+          "overOdd": 1.7,
+          "underOdd": 1.74
+        },
+        {
+          "player": "Daniel Gafford",
+          "team": 2,
+          "line": 17.5,
+          "overOdd": 1.54,
+          "underOdd": 1.92
+        },
+        {
+          "player": "Naji Marshall",
+          "team": 2,
+          "line": 15.5,
+          "overOdd": 1.58,
+          "underOdd": 1.86
+        },
+        {
+          "player": "Walter Clayton Jr.",
+          "team": 2,
+          "line": 13.5,
           "overOdd": 1.64,
           "underOdd": 1.82
         },
         {
-          "player": "Jabari Smith",
+          "player": "Morez Johnson Jr",
           "team": 2,
-          "line": 21.5,
-          "overOdd": 1.47,
+          "line": 12.5,
+          "overOdd": 1.66,
+          "underOdd": 1.8
+        },
+        {
+          "player": "Zaccharie Risacher",
+          "team": 2,
+          "line": 11.5,
+          "overOdd": 1.49,
           "underOdd": 2
         },
         {
-          "player": "Fred VanVleet",
+          "player": "Caleb Martin",
           "team": 2,
-          "line": 20.5,
-          "overOdd": 1.7,
-          "underOdd": 1.76
+          "line": 10.5,
+          "overOdd": 1.64,
+          "underOdd": 1.82
         }
       ]
+    },
+    {
+      "matchId": 73697026,
+      "status": "PREMATCH",
+      "matchStart": 1795644900,
+      "team1": "Philadelphia 76ers",
+      "team2": "Miami Heat",
+      "odd1": 1.68,
+      "odd2": 1.76,
+      "playerTotalPRA": []
     }
   ]
 }
